@@ -59,7 +59,7 @@ def parse_source_list(source_list, source=None):
                      engine="python")
     if source is not None:
         df = df.query("source == @source")
-    return df
+    return df.drop_duplicates()
 
 
 def check_bbox(blc, trc, image_size):
