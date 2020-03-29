@@ -20,6 +20,7 @@ def rename_mc_stack_files(dir_all_files, mojave_format=True):
     all_stack_files = glob.glob(os.path.join(dir_all_files, "*.uvf"))
     all_stack_files = [os.path.split(fn)[-1] for fn in all_stack_files]
     realizations = set([fn.split('_')[1] for fn in all_stack_files])
+    cwd = os.getcwd()
     os.chdir(dir_all_files)
     for realization in realizations:
         print("Making directory for realization {}".format(realization))
@@ -33,8 +34,10 @@ def rename_mc_stack_files(dir_all_files, mojave_format=True):
         else:
             original_fn = fn.split('_')[2]+'_'+fn.split('_')[3]
 
-        print("Copying {}".format(fn))
-        shutil.copy(os.path.join(dir_all_files, fn), os.path.join(dir_all_files, "artificial_{}".format(realization), original_fn))
+        print("Moving {}".format(fn))
+        shutil.move(os.path.join(dir_all_files, fn),
+                    os.path.join(dir_all_files, "artificial_{}".format(realization), original_fn))
+    os.chdir(cwd)
 
 
 def downscale_uvdata_by_freq(uvdata):
@@ -126,11 +129,11 @@ class ArtificialDataCreator(object):
 
     def _clean_original_data_with_the_same_params(self):
         print("Cleaning uv-data with the same parameters: mapsize = {}, beam = {}".format(self.mapsize_clean, self.beam))
-        print("Cleaning {}...".format(self.uvfits_file))
         if self.shift is not None:
             shift = self.shift
         else:
             shift = None
+        print("Using UVFITS {} and applying shift = {}...".format(self.uvfits_file, shift))
         for stokes in self.stokes:
             print("Stokes {}".format(stokes))
             clean_difmap(fname=self.uvfits_file, outfname="cc_{}.fits".format(stokes),
@@ -163,7 +166,7 @@ class ArtificialDataCreator(object):
             analysing D-terms, while using them is essential for bootstrap-like analysis.
             (default: True)
         """
-        print("Creating data with added D-terms and cleaning them.")
+        print("Creating data with added residual uncertainty and cleaning them.")
         # Get uv-data and CLEAN model
         # ``ignore`` option for 1226 1996_03_22
         uvdata = UVData(self.uvfits_file, verify_option="ignore")

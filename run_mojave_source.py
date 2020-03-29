@@ -7,7 +7,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 import numpy as np
 import astropy.io.fits as pf
-from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize)
+from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize,
+                         find_image_std, find_bbox, choose_range_from_positive_tailed_distribution)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
 from stack_utils import (create_mean_image, create_std_image)
@@ -16,7 +17,6 @@ import sys
 sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
 from from_fits import create_clean_image_from_fits_file
 from image import plot as iplot
-from stack_utils import (find_image_std, find_bbox, choose_range_from_positive_tailed_distribution)
 
 
 def move_result_files_to_jet(source, calculon_dir, jet_dir):
@@ -92,7 +92,7 @@ class Simulation(object):
             creator.remove_cc_fits()
         rename_mc_stack_files(self.working_dir)
 
-    def create_original_stacks(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
+    def create_original_stack(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
         stack = Stack(self.uvfits_files, self.common_mapsize_clean, self.common_beam,
                       working_dir=self.working_dir, create_stacks=True,
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
@@ -113,9 +113,9 @@ class Simulation(object):
             data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
             uvfits_files = sorted(glob.glob(os.path.join(data_dir, "*uvf")))
             # Shifts are already inserted in artificial data
-            stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam, working_dir=data_dir,
-                          create_stacks=True, shifts=None,
+            stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam,
                           path_to_clean_script=self.path_to_clean_script,
+                          shifts=None, working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
@@ -316,8 +316,9 @@ if __name__ == "__main__":
     jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
-                 source_epoch_core_offset_file, working_dir,
-                 path_to_clean_script=path_to_clean_script)
+                            source_epoch_core_offset_file, working_dir,
+                            path_to_clean_script=path_to_clean_script)
+    simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)

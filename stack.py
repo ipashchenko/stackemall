@@ -108,7 +108,7 @@ class Stack(object):
         self.i_mask = None
 
     def _clean_original_data_with_the_same_params(self):
-        print("Cleaning uv-data with the same parameters: mapsize = {}, beam = {}".format(self.mapsize_clean, self.beam))
+        print("Cleaning uv-data with the same parameters: mapsize = {}, restore beam = {}".format(self.mapsize_clean, self.beam))
         for i, uvfits_file in enumerate(self.uvfits_files):
             if self.shifts is not None:
                 shift = self.shifts[i]
@@ -547,29 +547,3 @@ class Stack(object):
             for cc_fits in self.ccfits_files[stokes]:
                 os.unlink(cc_fits)
 
-
-if __name__ == "__main__":
-
-    from stack_utils import parse_source_list, convert_mojave_epoch
-    mapsize_clean = (512, 0.1)
-    beam = (0.68, 0.68, 0)
-    data_dir = "/home/ilya/data/stacks/MOJAVE/0212+735"
-    working_dir = data_dir
-    uvfits_files = list()
-    shifts = list()
-    source_list = "/home/ilya/github/dterms/core_offsets_tmp"
-    df = parse_source_list(source_list, source="0212+735")
-    df = df.drop_duplicates()
-    for index, row in df.iterrows():
-        epoch = convert_mojave_epoch(row['epoch'])
-        shifts.append((row['shift_ra'], row['shift_dec']))
-        print("Epoch {} with shifts RA={}, DEC={}".format(epoch, row['shift_ra'], row['shift_dec']))
-        uvfits_files.append(os.path.join(data_dir, "{}.u.{}.uvf".format("0212+735", epoch)))
-
-    stack = Stack(uvfits_files, mapsize_clean, beam, working_dir=working_dir,
-                  create_stacks=True, shifts=shifts,
-                  # path_to_clean_script="/home/ilya/github/ve/difmap/final_clean_nw")
-                  path_to_clean_script="/home/ilya/data/stacks/stack_comparison/final_clean",
-                  n_epochs_not_masked_min=1)
-    stack.plot_stack_images("dasha_diff_mask_first_nmin1", outdir=data_dir)
-    stack.save_stack_images("dasha_diff_mask_first_nmin1", outdir=data_dir)
