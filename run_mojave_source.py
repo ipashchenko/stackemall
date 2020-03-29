@@ -294,7 +294,7 @@ if __name__ == "__main__":
 
     # source = sys.argv[1]
     source = "0212+735"
-    n_mc = 5
+    n_mc = 3
     common_mapsize_clean = choose_mapsize(source)
     # TODO: Get info on all beams
     common_beam = (0.8, 0.8, 0)

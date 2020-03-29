@@ -235,6 +235,5 @@ class ArtificialDataCreator(object):
         Remove FITS files with CC for all Stokes.
         """
         for stokes in self.stokes:
-            for cc_fits in self.ccfits_files[stokes]:
-                os.unlink(cc_fits)
+            os.unlink(self.ccfits_files[stokes])
 
