@@ -4,6 +4,7 @@ import glob
 import shutil
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
 import numpy as np
 import astropy.io.fits as pf
 from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize)
