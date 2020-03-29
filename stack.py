@@ -530,15 +530,15 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
             # Others (scalar averaged) have masks
-            else:
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
                 hdu = pf.PrimaryHDU(data=np.ma.filled(self.stack_images[stokes].image, np.nan), header=hdr)
+            elif stokes in ("I_mask", "P_mask"):
+                hdu = pf.PrimaryHDU(data=np.array(self.stack_images[stokes], dtype=int),
+                                    header=hdr)
+            else:
+                raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
             hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)))
-
-        hdu = pf.PrimaryHDU(data=self.stack_images["P_mask"], header=hdr)
-        hdu.writeto(os.path.join(outdir, "{}_pmask.fits".format(save_fn)))
-        hdu = pf.PrimaryHDU(data=self.stack_images["I_mask"], header=hdr)
-        hdu.writeto(os.path.join(outdir, "{}_imask.fits".format(save_fn)))
 
     def remove_cc_fits(self):
         """
