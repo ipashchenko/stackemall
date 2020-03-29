@@ -10,10 +10,8 @@ sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
 from spydiff import clean_difmap
 from uv_data import UVData
 from from_fits import (create_model_from_fits_file, create_clean_image_from_fits_file)
-from components import ImageComponent
-from model import Model
 from bootstrap import create_random_D_dict, create_const_amp_D_dict, boot_ci
-from my_utils import create_mask, find_image_std
+
 
 
 def rename_mc_stack_files(dir_all_files, mojave_format=True):
@@ -46,32 +44,6 @@ def downscale_uvdata_by_freq(uvdata):
     else:
         downscale_by_freq = False
     return downscale_by_freq
-
-
-def create_models_from_stack(stack_images, cc_stack_images, template_image):
-    template_image = create_clean_image_from_fits_file(template_image)
-    model_i = Model(stokes="I")
-
-    std = find_image_std(stack_images["I"], beam_npixels=100)
-    mask = stack_images["I"] < 4*std
-    mask_reg = create_mask(stack_images["I"].shape, (200, 000, 300, 300))
-    mask = np.logical_or(mask, ~mask_reg)
-
-    image = np.ma.array(cc_stack_images["I"], mask=mask)
-    image = np.ma.filled(image, 0.0)
-    model_i.add_component(ImageComponent(image, template_image.x, template_image.y))
-
-    model_q = Model(stokes="Q")
-    image = np.ma.array(cc_stack_images["Q"], mask=stack_images["P_mask"])
-    image = np.ma.filled(image, 0.0)
-    model_q.add_component(ImageComponent(image, template_image.x, template_image.y))
-
-    model_u = Model(stokes="U")
-    image = np.ma.array(cc_stack_images["U"], mask=stack_images["P_mask"])
-    image = np.ma.filled(image, 0.0)
-    model_u.add_component(ImageComponent(image, template_image.x, template_image.y))
-
-    return {"I": model_i, "Q": model_q, "U": model_u}
 
 
 class ArtificialDataCreator(object):

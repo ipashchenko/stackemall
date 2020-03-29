@@ -8,10 +8,10 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 import numpy as np
 import astropy.io.fits as pf
 from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize,
-                         find_image_std, find_bbox, choose_range_from_positive_tailed_distribution)
+                         find_image_std, find_bbox, create_std_image,
+                         choose_range_from_positive_tailed_distribution)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
-from stack_utils import (create_mean_image, create_std_image)
 import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
