@@ -295,7 +295,7 @@ class Simulation(object):
 if __name__ == "__main__":
 
     # source = sys.argv[1]
-    source = "0212+735"
+    source = "0006+061"
     n_mc = 3
     common_mapsize_clean = choose_mapsize(source)
     # TODO: Get info on all beams
