@@ -100,7 +100,7 @@ class Simulation(object):
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
-        stack.save_stack_images("{}_original_images_stack.npz".format(self.source),
+        stack.save_stack_images("{}_original_images".format(self.source),
                                 outdir=self.working_dir)
         stack.save_stack_images_in_fits("{}_original_stack".format(self.source),
                                         outdir=self.working_dir)

@@ -104,7 +104,7 @@ class ArtificialDataCreator(object):
             shift = self.shift
         else:
             shift = None
-        print("Using UVFITS {} and applying shift = {}...".format(self.uvfits_file, shift))
+        print("UVFITS {} shift = {}".format(self.uvfits_file, shift))
         for stokes in self.stokes:
             print("Stokes {}".format(stokes))
             clean_difmap(fname=self.uvfits_file, outfname="cc_{}.fits".format(stokes),
@@ -185,7 +185,7 @@ class ArtificialDataCreator(object):
 
         if sigma_evpa is not None:
             fi = np.random.normal(0, np.deg2rad(sigma_evpa))
-            print("*   rotating EVPA...")
+            print("   * rotating EVPA...")
             uvdata.rotate_evpa(fi)
 
         uvdata.save(uvf_dterms, rewrite=True, downscale_by_freq=downscale_by_freq)
