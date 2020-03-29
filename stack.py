@@ -515,7 +515,7 @@ class Stack(object):
         if outdir is None:
             outdir = self.working_dir
 
-        hdr = pf.open(self.ccfits_files["I"[0]])[0].header
+        hdr = pf.open(self.ccfits_files["I"][0])[0].header
 
         for stokes in self.stack_images:
             # Mask can't be np.nan for int64

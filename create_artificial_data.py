@@ -13,7 +13,6 @@ from from_fits import (create_model_from_fits_file, create_clean_image_from_fits
 from bootstrap import create_random_D_dict, create_const_amp_D_dict, boot_ci
 
 
-
 def rename_mc_stack_files(dir_all_files, mojave_format=True):
     all_stack_files = glob.glob(os.path.join(dir_all_files, "*.uvf"))
     all_stack_files = [os.path.split(fn)[-1] for fn in all_stack_files]
