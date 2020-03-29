@@ -530,14 +530,14 @@ class Stack(object):
             else:
                 hdu = pf.PrimaryHDU(data=np.ma.filled(self.stack_images[stokes].image, np.nan), header=hdr)
 
-            hdu.writeto(os.path.join(outdir, "{}_{}_stack_{}.fits".format(self.source, stokes, save_fn)))
+            hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)))
 
         if self.pol_mask is not None:
             hdu = pf.PrimaryHDU(data=self.pol_mask, header=hdr)
-            hdu.writeto(os.path.join(outdir, "{}_pmask_stack_{}.fits".format(self.source, save_fn)))
+            hdu.writeto(os.path.join(outdir, "{}_pmask.fits".format(save_fn)))
         if self.i_mask is not None:
             hdu = pf.PrimaryHDU(data=self.i_mask, header=hdr)
-            hdu.writeto(os.path.join(outdir, "{}_imask_stack_{}.fits".format(self.source, save_fn)))
+            hdu.writeto(os.path.join(outdir, "{}_imask.fits".format(save_fn)))
 
     def remove_cc_fits(self):
         """

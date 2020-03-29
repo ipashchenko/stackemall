@@ -45,7 +45,9 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     # Original stacks
     files.append("{}_original_images_stack.npz".format(source))
     for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG", "NEPOCHS"):
-        files.append("{}_{}_original_images_stack.fits".format(source, stokes))
+        files.append("{}_original_stack_{}.fits".format(source, stokes))
+    files.append("{}_original_stack_imask.fits".format(source))
+    files.append("{}_original_stack_pmask.fits".format(source))
 
     for file in files:
         shutil.move(os.path.join(calculon_dir, file), os.path.join(jet_dir, source, file))
@@ -100,7 +102,7 @@ class Simulation(object):
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
         stack.save_stack_images("{}_original_images_stack.npz".format(self.source),
                                 outdir=self.working_dir)
-        stack.save_stack_images_in_fits("{}_original_images".format(self.source),
+        stack.save_stack_images_in_fits("{}_original_stack".format(self.source),
                                         outdir=self.working_dir)
         self.hdr = pf.open(stack.ccfits_files["I"][0])[0].header
         self.some_image = create_clean_image_from_fits_file(stack.ccfits_files["I"][0])
