@@ -100,7 +100,9 @@ class Simulation(object):
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
-        stack.save_stack_images("{}_original_images".format(self.source),
+        stack.save_stack_images("{}_original".format(self.source),
+                                outdir=self.working_dir)
+        stack.plot_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.save_stack_images_in_fits("{}_original_stack".format(self.source),
                                         outdir=self.working_dir)
@@ -161,7 +163,7 @@ class Simulation(object):
             return
 
         # Create pictures of errors
-        original_images = np.load(os.path.join(self.working_dir, "{}_original_images_stack.npz".format(self.source)))
+        original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
         # Get noise and boxes estimates from original I stack
         std = find_image_std(original_images["I"], beam_npixels=self._npixels_beam)
         blc, trc = find_bbox(original_images["I"], level=4*std,

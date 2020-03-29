@@ -359,6 +359,12 @@ class Stack(object):
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["STDFPOL"] = stdfpol_image
 
+        pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
+                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=3, return_quantile=True)
+        self.stack_images["P_mask"] = pang_mask_dict["P"]
+        self.stack_images["I_mask"] = pang_mask_dict["I"]
+        self.stack_images["P_quantile"] = ppol_quantile
+
     def plot_stack_images(self, save_fn, outdir=None):
 
         if outdir is None:
@@ -374,14 +380,13 @@ class Stack(object):
         pang2_image = self.stack_images["PANG2"]
         std_pang_image = self.stack_images["STDPANG"]
         std_fpol_image = self.stack_images["STDFPOL"]
+        ppol_quantile = self.stack_images["P_quantile"]
+        ipol_mask = self.stack_images["I_mask"]
+        ppol_mask = self.stack_images["P_mask"]
 
         std = find_image_std(ipol_image.image, beam_npixels=self._npixels_beam)
         blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=4*std,
                              min_area_pix=10*self._npixels_beam, delta=10)
-        pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
-                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=3, return_quantile=True)
-        self.pol_mask = pang_mask_dict["P"]
-        self.i_mask = pang_mask_dict["I"]
 
         # I (1 contour) + P (color) + EVPA (vector)
         fig = iplot(ppol_image.image, x=ipol_image.x, y=ipol_image.y,
@@ -391,7 +396,7 @@ class Stack(object):
         # Add IPOL single contour and vectors of PANG with colors of PPOL
         fig = iplot(contours=ipol_image.image, vectors=pang_image.image,
                     x=ipol_image.x, y=ipol_image.y, vinc=4,  contour_linewidth=0.25,
-                    vectors_mask=pang_mask_dict["P"], abs_levels=[3*std], blc=blc, trc=trc,
+                    vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
                     beam=self.beam, close=False, show_beam=True, show=True,
                     contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
         axes = fig.get_axes()[0]
@@ -406,7 +411,7 @@ class Stack(object):
             v_std = mad_std(np.ma.array(1000*vpol_image.image, mask=~self.i_mask).compressed())
             max_snr = max_abs_v/v_std
             fig = iplot(ipol_image.image, 1000*vpol_image.image/v_std, x=ipol_image.x, y=ipol_image.y,
-                        min_abs_level=3*std, colors_mask=self.i_mask, blc=blc, trc=trc,
+                        min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
                         beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
                         show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
                         contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
@@ -417,9 +422,8 @@ class Stack(object):
         # Add IPOL single contour and colors of FPOL with colorbar
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fpol_mask = pang_mask_dict["P"]
         fig = iplot(ipol_image.image, fpol_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=fpol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
+                    min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
                     cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
                     contour_linewidth=0.25)
@@ -502,10 +506,9 @@ class Stack(object):
             else:
                 save_dict.update({stokes: np.ma.filled(self.stack_images[stokes].image, np.nan)})
 
-        if self.pol_mask is not None:
-            save_dict.update({"P_mask": self.pol_mask})
-        if self.i_mask is not None:
-            save_dict.update({"I_mask": self.i_mask})
+        save_dict.update({"P_mask": self.stack_images["P_mask"]})
+        save_dict.update({"I_mask": self.stack_images["I_mask"]})
+        save_dict.update({"P_quantile": self.stack_images["P_quantile"]})
 
         np.savez_compressed(os.path.join(outdir, save_fn+"_stack.npz"),
                             **save_dict)
@@ -532,12 +535,10 @@ class Stack(object):
 
             hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)))
 
-        if self.pol_mask is not None:
-            hdu = pf.PrimaryHDU(data=self.pol_mask, header=hdr)
-            hdu.writeto(os.path.join(outdir, "{}_pmask.fits".format(save_fn)))
-        if self.i_mask is not None:
-            hdu = pf.PrimaryHDU(data=self.i_mask, header=hdr)
-            hdu.writeto(os.path.join(outdir, "{}_imask.fits".format(save_fn)))
+        hdu = pf.PrimaryHDU(data=self.stack_images["P_mask"], header=hdr)
+        hdu.writeto(os.path.join(outdir, "{}_pmask.fits".format(save_fn)))
+        hdu = pf.PrimaryHDU(data=self.stack_images["I_mask"], header=hdr)
+        hdu.writeto(os.path.join(outdir, "{}_imask.fits".format(save_fn)))
 
     def remove_cc_fits(self):
         """
