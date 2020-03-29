@@ -503,12 +503,12 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 save_dict.update({stokes: self.stack_images[stokes].image})
             # Others (scalar averaged) have masks
-            else:
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
                 save_dict.update({stokes: np.ma.filled(self.stack_images[stokes].image, np.nan)})
-
-        save_dict.update({"P_mask": self.stack_images["P_mask"]})
-        save_dict.update({"I_mask": self.stack_images["I_mask"]})
-        save_dict.update({"P_quantile": self.stack_images["P_quantile"]})
+            elif stokes in ("I_mask", "P_mask", "P_quantile"):
+                save_dict.update({stokes: self.stack_images[stokes]})
+            else:
+                raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
         np.savez_compressed(os.path.join(outdir, save_fn+"_stack.npz"),
                             **save_dict)
