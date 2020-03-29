@@ -84,7 +84,7 @@ class Simulation(object):
             d_term = json.load(fo)
 
         for uvfits_file, shift in zip(self.uvfits_files, self.shifts):
-            print("Creating artificial data for {} & correcting shift = {}".format(uvfits_file, shift))
+            print("Creating {} artificial data sets from {} with applied shift = {}".format(n_mc, uvfits_file, shift))
             creator = ArtificialDataCreator(uvfits_file, self.path_to_clean_script, self.common_mapsize_clean,
                                             self.common_beam, shift=shift, working_dir=self.working_dir)
             creator.mc_create_uvfits(n_mc=self.n_mc, d_term=d_term, sigma_scale_amplitude=sigma_scale_amplitude,
@@ -122,7 +122,8 @@ class Simulation(object):
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
                                     outdir=self.working_dir)
-            stack.save_stack_images_in_fits(str(i+1).zfill(3))
+            # TODO: Do we need FITS files of artificial stacks?
+            # stack.save_stack_images_in_fits(str(i+1).zfill(3))
             # Remove CLEAN FITS-files
             stack.remove_cc_fits()
             # Remove artificial data files
@@ -303,7 +304,7 @@ if __name__ == "__main__":
     common_mapsize_clean = choose_mapsize(source)
     # TODO: Get info on all beams
     common_beam = (0.8, 0.8, 0)
-    source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets.txt"
+    source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets_debug.txt"
     working_dir = "/home/ilya/github/stackemall/data/"
     path_to_clean_script = "/home/ilya/github/stackemall/final_clean"
 
@@ -324,4 +325,5 @@ if __name__ == "__main__":
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
+    simulation.create_erros_images()
     move_result_files_to_jet(source, working_dir, jet_dir)

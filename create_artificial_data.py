@@ -137,7 +137,6 @@ class ArtificialDataCreator(object):
             analysing D-terms, while using them is essential for bootstrap-like analysis.
             (default: True)
         """
-        print("Creating data with added residual uncertainty and cleaning them.")
         # Get uv-data and CLEAN model
         # ``ignore`` option for 1226 1996_03_22
         uvdata = UVData(self.uvfits_file, verify_option="ignore")
@@ -166,16 +165,16 @@ class ArtificialDataCreator(object):
             else:
                 d_dict = create_random_D_dict(uvdata, sigma_D=d_term)
 
-            print("Adding D-terms...")
+            print("   * adding D-terms...")
             uvdata.add_D(d_dict)
 
         if sigma_scale_amplitude is not None:
-            print("Adding scaling of amplitudes of all hands...")
+            print("   * adding scaling of amplitudes of all hands...")
             scale_l = 1.0+np.random.normal(0, sigma_scale_amplitude, size=1)[0]
             scale_r = 1.0+np.random.normal(0, sigma_scale_amplitude, size=1)[0]
             uvdata.scale_hands(scale_r=scale_r, scale_l=scale_l)
 
-        print("Adding noise...")
+        print("   * adding noise...")
         uvdata.noise_add(noise)
 
         uvf_savename = os.path.split(self.uvfits_file)[-1]
@@ -186,7 +185,7 @@ class ArtificialDataCreator(object):
 
         if sigma_evpa is not None:
             fi = np.random.normal(0, np.deg2rad(sigma_evpa))
-            print("Rotating EVPA...")
+            print("*   rotating EVPA...")
             uvdata.rotate_evpa(fi)
 
         uvdata.save(uvf_dterms, rewrite=True, downscale_by_freq=downscale_by_freq)
@@ -196,6 +195,7 @@ class ArtificialDataCreator(object):
                          constant_dterm_amplitude=False, ignore_cross_hands=False):
         import shutil
         for i in range(n_mc):
+            print("Creating artificial data {} of {} :".format(i+1, n_mc))
             # Only create artificial uvfits files
             self.create_images(d_term, noise_scale, sigma_scale_amplitude, sigma_evpa,
                                constant_dterm_amplitude, ignore_cross_hands)
