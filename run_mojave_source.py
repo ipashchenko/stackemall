@@ -34,7 +34,7 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
         os.mkdir(os.path.join(jet_dir, source))
     files = list()
     # Pictures of original stacks
-    for item in ("ppol", "fpol", "ppol2", "fpol2", "pangstd", "fpolstd"):
+    for item in ("ppol", "fpol", "ppol2", "fpol2", "pangstd", "fpolstd", "nepochs"):
         files.append("{}_original_{}.png".format(source, item))
     # Pictures of errors
     for item in ("ipol", "ppol", "fpol", "pang", "ppol2", "fpol2", "pang2", "pangstd", "fpolstd"):

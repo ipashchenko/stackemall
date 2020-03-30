@@ -538,7 +538,7 @@ class Stack(object):
                 hdu = pf.PrimaryHDU(data=np.array(self.stack_images[stokes], dtype=int),
                                     header=hdr)
             elif stokes == "P_quantile":
-                pass
+                continue
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
