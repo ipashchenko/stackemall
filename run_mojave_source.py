@@ -135,7 +135,7 @@ class Simulation(object):
             for uvfits_file in uvfits_files:
                 os.unlink(uvfits_file)
 
-    def create_erros_images(self, create_pictures=True):
+    def create_errors_images(self, create_pictures=True):
 
         some_image = self.some_image
         beam = self.common_beam
@@ -310,7 +310,7 @@ if __name__ == "__main__":
 
     # source = sys.argv[1]
     source = "0003-066"
-    n_mc = 3
+    n_mc = 50
     common_mapsize_clean = choose_mapsize(source)
     # TODO: Get info on all beams
     common_beam = (0.8, 0.8, 0)
@@ -335,7 +335,7 @@ if __name__ == "__main__":
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
-    simulation.create_erros_images()
+    simulation.create_errors_images()
     move_result_files_to_jet(source, working_dir, jet_dir)
 
     npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))

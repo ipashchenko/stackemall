@@ -460,7 +460,7 @@ class Stack(object):
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
         fig = iplot(contours=ipol_image.image, colors=fpol2_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=fpol2_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                    min_abs_level=3*std, colors_mask=fpol2_image.image.mask, color_clim=[0, 0.7], blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
                     cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
                     contour_linewidth=0.25)
