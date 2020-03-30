@@ -37,14 +37,14 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     for item in ("ipol", "ppol", "fpol", "pang", "ppol2", "fpol2", "pang2", "pangstd", "fpolstd"):
         files.append("{}_{}_errors.png".format(source, item))
     # FITS files with errors of stacks
-    for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
+    for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
         files.append("{}_{}_stack_error.fits".format(source, stokes))
     # npz file with errors of stacks
     files.append("{}_stack_errors.npz".format(source))
 
     # Original stacks
     files.append("{}_original_images_stack.npz".format(source))
-    for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG", "NEPOCHS"):
+    for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD", "NEPOCHS"):
         files.append("{}_original_stack_{}.fits".format(source, stokes))
     files.append("{}_original_stack_imask.fits".format(source))
     files.append("{}_original_stack_pmask.fits".format(source))
@@ -138,7 +138,7 @@ class Simulation(object):
         beam = self.common_beam
 
         errors_dict = dict()
-        for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
+        for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
             mc_images = list()
             for i in range(self.n_mc):
                 npz = np.load(os.path.join(self.working_dir, "{}_mc_images_{}_stack.npz".format(self.source, str(i + 1).zfill(3))))
@@ -146,7 +146,7 @@ class Simulation(object):
                 # This stacks are not masked => use trivial mask with zeros
                 if stokes in ("I", "PPOL", "PANG", "FPOL"):
                     array = np.ma.array(array, mask=np.zeros(array.shape, dtype=bool))
-                elif stokes in ("PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
+                elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
                     # Masked array with masked values having nans
                     array = np.ma.array(array, mask=np.isnan(array))
                 else:
@@ -270,7 +270,7 @@ class Simulation(object):
         plt.close(fig)
 
         # STDPANG
-        error = errors_dict["STDPANG"]
+        error = errors_dict["PANGSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
@@ -279,12 +279,12 @@ class Simulation(object):
                     colorbar_label=r"$\sigma_{\sigma_{\rm EVPA}}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_stdpang_errors.png".format(self.source)),
+        fig.savefig(os.path.join(self.working_dir, "{}_pangstd_errors.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
         # STDFPOL
-        error = errors_dict["STDFPOL"]
+        error = errors_dict["FPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
@@ -293,7 +293,7 @@ class Simulation(object):
                     colorbar_label=r"$\sigma_{\sigma_{m}}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_stdfpol_errors.png".format(self.source)),
+        fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 

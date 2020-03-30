@@ -503,7 +503,7 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 save_dict.update({stokes: self.stack_images[stokes].image})
             # Others (scalar averaged) have masks
-            elif stokes in ("PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGTSD"):
                 save_dict.update({stokes: np.ma.filled(self.stack_images[stokes].image, np.nan)})
             elif stokes in ("I_mask", "P_mask", "P_quantile"):
                 save_dict.update({stokes: self.stack_images[stokes]})
@@ -530,7 +530,7 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
             # Others (scalar averaged) have masks
-            elif stokes in ("PPOL2", "FPOL2", "PANG2", "STDFPOL", "STDPANG"):
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
                 hdu = pf.PrimaryHDU(data=np.ma.filled(self.stack_images[stokes].image, np.nan), header=hdr)
             elif stokes in ("I_mask", "P_mask"):
                 hdu = pf.PrimaryHDU(data=np.array(self.stack_images[stokes], dtype=int),
