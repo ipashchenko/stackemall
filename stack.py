@@ -505,8 +505,10 @@ class Stack(object):
             # Others (scalar averaged) have masks
             elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
                 save_dict.update({stokes: np.ma.filled(self.stack_images[stokes].image, np.nan)})
-            elif stokes in ("I_mask", "P_mask", "P_quantile"):
+            elif stokes in ("I_mask", "P_mask"):
                 save_dict.update({stokes: self.stack_images[stokes]})
+            elif stokes == "P_quantile":
+                pass
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 

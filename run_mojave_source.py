@@ -33,6 +33,9 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     if not os.path.exists(os.path.join(jet_dir, source)):
         os.mkdir(os.path.join(jet_dir, source))
     files = list()
+    # Pictures of original stacks
+    for item in ("ppol", "fpol", "ppol2", "fpol2", "pangstd", "fpolstd"):
+        files.append("{}_original_{}.png".format(source, item))
     # Pictures of errors
     for item in ("ipol", "ppol", "fpol", "pang", "ppol2", "fpol2", "pang2", "pangstd", "fpolstd"):
         files.append("{}_{}_errors.png".format(source, item))
@@ -44,7 +47,7 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
 
     # Original stacks
     files.append("{}_original_stack.npz".format(source))
-    for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD", "NEPOCHS"):
+    for stokes in ("I", "Q", "U", "RPOL", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD", "NEPOCHS"):
         files.append("{}_original_stack_{}.fits".format(source, stokes))
     files.append("{}_original_stack_I_mask.fits".format(source))
     files.append("{}_original_stack_P_mask.fits".format(source))
@@ -158,6 +161,11 @@ class Simulation(object):
             hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)))
         np.savez_compressed(os.path.join(self.working_dir, "{}_stack_errors.npz".format(self.source)),
                             **errors_dict)
+
+        # Remove directories with artificial files
+        for i in range(self.n_mc):
+            data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
+            os.rmdir(data_dir)
 
         if not create_pictures:
             return
@@ -329,3 +337,7 @@ if __name__ == "__main__":
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_erros_images()
     move_result_files_to_jet(source, working_dir, jet_dir)
+
+    npz_files = glob.glon(os.path.join(working_dir, "*mc_images*stack.npz"))
+    for npz_file in npz_files:
+        os.unlink(npz_file)
