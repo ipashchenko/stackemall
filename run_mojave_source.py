@@ -47,7 +47,7 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
 
     # Original stacks
     files.append("{}_original_stack.npz".format(source))
-    for stokes in ("I", "Q", "U", "RPOL", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD", "NEPOCHS"):
+    for stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD", "NEPOCHS"):
         files.append("{}_original_stack_{}.fits".format(source, stokes))
     files.append("{}_original_stack_I_mask.fits".format(source))
     files.append("{}_original_stack_P_mask.fits".format(source))
