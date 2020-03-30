@@ -317,7 +317,7 @@ class Stack(object):
                                stokes="STDPANG")
         std_pang_image.image = stat_of_masked(pang2_arrays, stat="scipy_circstd",
                                               n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
-        self.stack_images["STDPANG"] = std_pang_image
+        self.stack_images["PANGSTD"] = std_pang_image
 
 
         print("Creating FPOL2 stack")
@@ -357,7 +357,7 @@ class Stack(object):
                                  stokes="STDFPOL")
         stdfpol_image.image = stat_of_masked(fpol2_arrays, stat="std",
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
-        self.stack_images["STDFPOL"] = stdfpol_image
+        self.stack_images["FPOLSTD"] = stdfpol_image
 
         pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
                                                  ("I", "Q", "U")}, self._npixels_beam, n_sigma=3, return_quantile=True)
@@ -378,8 +378,8 @@ class Stack(object):
         nepochs_image = self.stack_images["NEPOCHS"]
         fpol2_image = self.stack_images["FPOL2"]
         pang2_image = self.stack_images["PANG2"]
-        std_pang_image = self.stack_images["STDPANG"]
-        std_fpol_image = self.stack_images["STDFPOL"]
+        std_pang_image = self.stack_images["PANGSTD"]
+        std_fpol_image = self.stack_images["FPOLSTD"]
         ppol_quantile = self.stack_images["P_quantile"]
         ipol_mask = self.stack_images["I_mask"]
         ppol_mask = self.stack_images["P_mask"]
