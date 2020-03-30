@@ -338,6 +338,6 @@ if __name__ == "__main__":
     simulation.create_erros_images()
     move_result_files_to_jet(source, working_dir, jet_dir)
 
-    npz_files = glob.glon(os.path.join(working_dir, "*mc_images*stack.npz"))
+    npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
     for npz_file in npz_files:
         os.unlink(npz_file)
