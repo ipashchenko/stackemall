@@ -89,8 +89,8 @@ class Stack(object):
         # Containers for full stack images
         self.stack_images = dict()
         for stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL",
-                       "PPOL2", "FPOL2", "PANG2", "NEPOCHS", "STDPANG",
-                       "STDFPOL"):
+                       "PPOL2", "FPOL2", "PANG2", "NEPOCHS", "PANGSTD",
+                       "FPOLSTD"):
             self.stack_images[stokes] = None
         if use_V:
             self.stack_images["V"] = None
@@ -314,7 +314,7 @@ class Stack(object):
                                pixref=self._image_ctor_params["pixref"],
                                freq=self._image_ctor_params["freq"],
                                pixrefval=self._image_ctor_params["pixrefval"],
-                               stokes="STDPANG")
+                               stokes="PANGSTD")
         std_pang_image.image = stat_of_masked(pang2_arrays, stat="scipy_circstd",
                                               n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["PANGSTD"] = std_pang_image
@@ -354,7 +354,7 @@ class Stack(object):
                                  pixref=self._image_ctor_params["pixref"],
                                  freq=self._image_ctor_params["freq"],
                                  pixrefval=self._image_ctor_params["pixrefval"],
-                                 stokes="STDFPOL")
+                                 stokes="FPOLSTD")
         stdfpol_image.image = stat_of_masked(fpol2_arrays, stat="std",
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["FPOLSTD"] = stdfpol_image
@@ -473,7 +473,7 @@ class Stack(object):
                     beam=self.beam, close=False, colorbar_label=r"$\sigma_{m}$", show_beam=True, show=True,
                     cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
                     contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_stdfpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        fig.savefig(os.path.join(outdir, "{}_fpolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
 
@@ -484,7 +484,7 @@ class Stack(object):
                     beam=self.beam, close=False, colorbar_label=r"$\sigma_{\rm EVPA},$ $^{\circ}$", show_beam=True, show=True,
                     cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
                     contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_stdpang.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
     def save_stack_images(self, save_fn, outdir=None):
