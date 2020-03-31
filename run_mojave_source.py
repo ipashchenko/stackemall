@@ -60,7 +60,7 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
 class Simulation(object):
     def __init__(self, source, n_mc, common_mapsize_clean, common_beam,
                  source_epoch_core_offset_file, working_dir,
-                 path_to_clean_script):
+                 path_to_clean_script, remove_artificial_uvfits_files=True):
         self.source = source
         self.n_mc = n_mc
         self.common_mapsize_clean = common_mapsize_clean
@@ -81,6 +81,7 @@ class Simulation(object):
         self.hdr = None
         # Template image
         self.some_image = None
+        self.remove_artificial_uvfits_files = remove_artificial_uvfits_files
 
     def create_artificial_uvdata(self, sigma_scale_amplitude, noise_scale,
                                  sigma_evpa_deg, VLBA_residual_Dterms_file):
@@ -132,9 +133,11 @@ class Simulation(object):
             # stack.save_stack_images_in_fits(str(i+1).zfill(3))
             # Remove CLEAN FITS-files
             stack.remove_cc_fits()
-            # Remove artificial data files
-            for uvfits_file in uvfits_files:
-                os.unlink(uvfits_file)
+
+            if self.remove_artificial_uvfits_files:
+                # Remove artificial data files
+                for uvfits_file in uvfits_files:
+                    os.unlink(uvfits_file)
 
     def create_errors_images(self, create_pictures=True):
 
@@ -169,10 +172,11 @@ class Simulation(object):
         np.savez_compressed(os.path.join(self.working_dir, "{}_stack_errors.npz".format(self.source)),
                             **errors_dict)
 
-        # Remove directories with artificial files
-        for i in range(self.n_mc):
-            data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
-            os.rmdir(data_dir)
+        if self.remove_artificial_uvfits_files:
+            # Remove directories with artificial files
+            for i in range(self.n_mc):
+                data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
+                os.rmdir(data_dir)
 
         if not create_pictures:
             return
@@ -319,6 +323,7 @@ if __name__ == "__main__":
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
     n_mc = 50
+    remove_artificial_uvfits_files = True
     common_mapsize_clean = choose_mapsize(source)
     common_beam = get_beam_info(source)
     # File with source, epoch, core offsets
@@ -344,7 +349,8 @@ if __name__ == "__main__":
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,
-                            path_to_clean_script=path_to_clean_script)
+                            path_to_clean_script=path_to_clean_script,
+                            remove_artificial_uvfits_files=remove_artificial_uvfits_files)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
