@@ -316,14 +316,15 @@ class Simulation(object):
 if __name__ == "__main__":
 
     source = sys.argv[1]
-    source = "0003-066"
     n_mc = 50
     common_mapsize_clean = choose_mapsize(source)
     common_beam = get_beam_info(source)
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets.txt"
     # Directory to save intermediate results
-    working_dir = "/home/ilya/github/stackemall/data/"
+    working_dir = "/home/ilya/github/stackemall/data/{}".format(source)
+    if not os.path.exists(working_dir):
+        os.mkdir(working_dir)
     # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "/home/ilya/github/stackemall/final_clean"
 
