@@ -334,11 +334,12 @@ class Simulation(object):
 
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
+        max_bias_value = np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
                     colorbar_label=r"$\b_{I}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
@@ -346,11 +347,12 @@ class Simulation(object):
 
         bias = biases_dict["PPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
                     colorbar_label=r"$\b_{P}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
@@ -358,11 +360,12 @@ class Simulation(object):
 
         bias = biases_dict["FPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
-        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+        max_bias_value = np.nanmax(np.abs(bias))
+        fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
-                    colorbar_label=r"$\b_{m}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    colorbar_label=r"$\b_{m}$", show_beam=True,
+                    show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
