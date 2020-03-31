@@ -143,8 +143,11 @@ class Simulation(object):
 
         some_image = self.some_image
         beam = self.common_beam
+        original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
+
 
         errors_dict = dict()
+        biases_dict = dict()
         for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
             mc_images = list()
             for i in range(self.n_mc):
@@ -159,6 +162,8 @@ class Simulation(object):
                 else:
                     raise Exception("{} no allowed, smth is going wrong!".format(stokes))
                 mc_images.append(array)
+
+            # Find errors
             if stokes not in ("PANG", "PANG2"):
                 std = stat_of_masked(mc_images, stat="std",
                                      n_epochs_not_masked_min=n_epochs_not_masked_min_std)
@@ -169,11 +174,23 @@ class Simulation(object):
             hdu = pf.PrimaryHDU(data=np.ma.filled(std, np.nan), header=self.hdr)
             errors_dict[stokes] = np.ma.filled(std, np.nan)
             hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)))
+
+            # Find biases
+            if stokes in ("I", "PPOL", "FPOL"):
+                mean = stat_of_masked(mc_images, stat="mean",
+                                      n_epochs_not_masked_min=n_epochs_not_masked_min_std)
+                bias = original_images[stokes] - mean
+                biases_dict[stokes] = np.ma.filled(bias, np.nan)
+                hdu = pf.PrimaryHDU(data=np.ma.filled(bias, np.nan), header=self.hdr)
+                hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)))
+
         np.savez_compressed(os.path.join(self.working_dir, "{}_stack_errors.npz".format(self.source)),
                             **errors_dict)
+        np.savez_compressed(os.path.join(self.working_dir, "{}_stack_biases.npz".format(self.source)),
+                            **biases_dict)
 
+        # Remove directories with artificial files optionally
         if self.remove_artificial_uvfits_files:
-            # Remove directories with artificial files
             for i in range(self.n_mc):
                 data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
                 os.rmdir(data_dir)
@@ -182,7 +199,6 @@ class Simulation(object):
             return
 
         # Create pictures of errors
-        original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
         # Get noise and boxes estimates from original I stack
         std = find_image_std(original_images["I"], beam_npixels=self._npixels_beam)
         blc, trc = find_bbox(original_images["I"], level=4*std,
@@ -197,7 +213,7 @@ class Simulation(object):
         fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
-                    colorbar_label=r"$\sigma_{\rm I}$, mJy/bm", show_beam=True,
+                    colorbar_label=r"$\sigma_{I}$, mJy/bm", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ipol_errors.png".format(self.source)),
@@ -210,7 +226,7 @@ class Simulation(object):
         fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
                     blc=blc, trc=trc, beam=beam, close=False,
-                    colorbar_label=r"$\sigma_{\rm P}$, mJy/bm", show_beam=True,
+                    colorbar_label=r"$\sigma_{P}$, mJy/bm", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ppol_errors.png".format(self.source)),
@@ -313,6 +329,42 @@ class Simulation(object):
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
+                    dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+        bias = biases_dict["I"]
+        bias = np.ma.array(bias, mask=original_images["I_mask"])
+        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    colorbar_label=r"$\b_{I}$, mJy/bm", show_beam=True,
+                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
+                    dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+        bias = biases_dict["PPOL"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    colorbar_label=r"$\b_{P}$, mJy/bm", show_beam=True,
+                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
+                    dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+        bias = biases_dict["FPOL"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=None,
+                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    colorbar_label=r"$\b_{m}$, mJy/bm", show_beam=True,
+                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
