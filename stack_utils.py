@@ -132,6 +132,10 @@ def find_bbox(array, level, min_maxintensity_mjyperbeam, min_area_pix,
         if prop.max_intensity > min_maxintensity_mjyperbeam/1000 and prop.area > min_area_pix:
             signal_props.append(prop)
 
+    # Sometimes no regions are found. In that case return full image
+    if not signal_props:
+        return (0, 0,), (array.shape[1], array.shape[1],)
+
     blcs = list()
     trcs = list()
 
