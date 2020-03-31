@@ -337,7 +337,8 @@ if __name__ == "__main__":
 
     sigma_scale_amplitude = 0.035
     noise_scale = 1.0
-    sigma_evpa_deg = 2.0
+    # MOJAVE VIII
+    sigma_evpa_deg = 3.0
     # File with D-terms residuals for VLBA & Eff.
     VLBA_residual_Dterms_file = "/home/ilya/github/stackemall/VLBA_EB_residuals_D.json"
 
