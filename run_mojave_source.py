@@ -183,7 +183,7 @@ class Simulation(object):
         std = find_image_std(original_images["I"], beam_npixels=self._npixels_beam)
         blc, trc = find_bbox(original_images["I"], level=4*std,
                              min_maxintensity_mjyperbeam=4*std,
-                             min_area_pix=4*self._npixels_beam, delta=10)
+                             min_area_pix=2*self._npixels_beam, delta=10)
 
         # I
         error = errors_dict["I"]
@@ -315,6 +315,8 @@ class Simulation(object):
 
 if __name__ == "__main__":
 
+    if len(sys.argv) == 1:
+        raise Exception("Specify source as positional argument")
     source = sys.argv[1]
     n_mc = 50
     common_mapsize_clean = choose_mapsize(source)
