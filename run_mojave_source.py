@@ -8,8 +8,9 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 import numpy as np
 import astropy.io.fits as pf
 from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize,
-                         find_image_std, find_bbox, create_std_image,
-                         choose_range_from_positive_tailed_distribution)
+                         find_image_std, find_bbox, stat_of_masked,
+                         choose_range_from_positive_tailed_distribution,
+                         get_beam_info)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
 import matplotlib.pyplot as plt
@@ -155,7 +156,13 @@ class Simulation(object):
                 else:
                     raise Exception("{} no allowed, smth is going wrong!".format(stokes))
                 mc_images.append(array)
-            std = create_std_image(mc_images, n_epochs_not_masked_min=n_epochs_not_masked_min_std)
+            if stokes not in ("PANG", "PANG2"):
+                std = stat_of_masked(mc_images, stat="std",
+                                     n_epochs_not_masked_min=n_epochs_not_masked_min_std)
+            else:
+                std = stat_of_masked(mc_images, stat="scipy_circstd",
+                                     n_epochs_not_masked_min=n_epochs_not_masked_min_std)
+
             hdu = pf.PrimaryHDU(data=np.ma.filled(std, np.nan), header=self.hdr)
             errors_dict[stokes] = np.ma.filled(std, np.nan)
             hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)))
@@ -223,9 +230,9 @@ class Simulation(object):
         # FPOL
         error = errors_dict["FPOL"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=False,
                     colorbar_label=r"$\sigma_{m}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -308,24 +315,28 @@ class Simulation(object):
 
 if __name__ == "__main__":
 
-    # source = sys.argv[1]
+    source = sys.argv[1]
     source = "0003-066"
     n_mc = 50
     common_mapsize_clean = choose_mapsize(source)
-    # TODO: Get info on all beams
-    common_beam = (0.8, 0.8, 0)
-    source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets_debug.txt"
+    common_beam = get_beam_info(source)
+    # File with source, epoch, core offsets
+    source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets.txt"
+    # Directory to save intermediate results
     working_dir = "/home/ilya/github/stackemall/data/"
+    # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "/home/ilya/github/stackemall/final_clean"
 
     sigma_scale_amplitude = 0.035
     noise_scale = 1.0
     sigma_evpa_deg = 2.0
+    # File with D-terms residuals for VLBA & Eff.
     VLBA_residual_Dterms_file = "/home/ilya/github/stackemall/VLBA_EB_residuals_D.json"
 
     n_epochs_not_masked_min = 1
     n_epochs_not_masked_min_std = 5
 
+    # Directory on calculon (jet mirror) to save results
     jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
