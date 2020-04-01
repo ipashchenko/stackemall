@@ -15,8 +15,7 @@ from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files
 from stack import Stack
 import matplotlib.pyplot as plt
 import sys
-# FIXME: Substitute with your local path
-sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
+sys.path.insert(0, 've/vlbi_errors')
 from from_fits import create_clean_image_from_fits_file
 from image import plot as iplot
 

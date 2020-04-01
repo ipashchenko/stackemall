@@ -5,8 +5,7 @@ import sys
 import numpy as np
 from stack_utils import (pol_mask, stat_of_masked, find_image_std, find_bbox,
                          correct_ppol_bias, image_of_nepochs_not_masked)
-# FIXME: Substitute with your local path
-sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
+sys.path.insert(0, 've/vlbi_errors')
 from spydiff import clean_difmap
 from from_fits import (create_image_from_fits_file,
                        create_clean_image_from_fits_file)

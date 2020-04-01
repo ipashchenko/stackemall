@@ -5,9 +5,8 @@ import sys
 import glob
 import shutil
 import numpy as np
-# FIXME: Substitute with your local path
 # git clone https://github.com/ipashchenko/ve.git
-sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
+sys.path.insert(0, 've/vlbi_errors')
 from spydiff import clean_difmap
 from uv_data import UVData
 from from_fits import (create_model_from_fits_file, create_clean_image_from_fits_file)

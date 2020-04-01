@@ -1,0 +1,3 @@
+[submodule "ve"]
+	path = ve
+	url = https://github.com/ipashchenko/ve.git
