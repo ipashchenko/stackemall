@@ -411,7 +411,7 @@ if __name__ == "__main__":
     # MOJAVE VIII
     sigma_evpa_deg = 3.0
     # File with D-terms residuals for VLBA & Eff.
-    VLBA_residual_Dterms_file = "/home/ilya/github/stackemall/VLBA_EB_residuals_D.json"
+    VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
 
     n_epochs_not_masked_min = 1
     n_epochs_not_masked_min_std = 5
