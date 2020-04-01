@@ -145,7 +145,6 @@ class Simulation(object):
         beam = self.common_beam
         original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
 
-
         errors_dict = dict()
         biases_dict = dict()
         for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
@@ -179,7 +178,7 @@ class Simulation(object):
             if stokes in ("I", "PPOL", "FPOL"):
                 mean = stat_of_masked(mc_images, stat="mean",
                                       n_epochs_not_masked_min=n_epochs_not_masked_min_std)
-                bias = original_images[stokes] - mean
+                bias = mean - original_images[stokes]
                 biases_dict[stokes] = np.ma.filled(bias, np.nan)
                 hdu = pf.PrimaryHDU(data=np.ma.filled(bias, np.nan), header=self.hdr)
                 hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)))
