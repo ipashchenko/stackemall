@@ -338,7 +338,7 @@ class Simulation(object):
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
-                    colorbar_label=r"$\b_{I}$, mJy/bm", show_beam=True,
+                    colorbar_label=r"$b_{I}$, mJy/bm", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
@@ -351,7 +351,7 @@ class Simulation(object):
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
-                    colorbar_label=r"$\b_{P}$, mJy/bm", show_beam=True,
+                    colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
@@ -364,7 +364,7 @@ class Simulation(object):
         fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=self.common_beam, close=False,
-                    colorbar_label=r"$\b_{m}$", show_beam=True,
+                    colorbar_label=r"$b_{m}$", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
