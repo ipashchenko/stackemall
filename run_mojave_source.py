@@ -53,6 +53,13 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     files.append("{}_original_stack_I_mask.fits".format(source))
     files.append("{}_original_stack_P_mask.fits".format(source))
 
+    # Biases
+    files.append("{}_stack_biases.npz".format(source))
+    for stokes in ("I", "PPOL", "FPOL"):
+        files.append("{}_{}_stack_bias.fits".format(source, stokes))
+    for stokes in ("ipol", "ppol", "fpol"):
+        files.append("{}_{}_bias.png".format(source, stokes))
+
     for file in files:
         shutil.move(os.path.join(calculon_dir, file), os.path.join(jet_dir, source, file))
 
@@ -211,7 +218,7 @@ class Simulation(object):
         error = np.ma.array(error, mask=original_images["I_mask"])
         fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{I}$, mJy/bm", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -224,7 +231,7 @@ class Simulation(object):
         error = np.ma.array(error, mask=original_images["P_mask"])
         fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{P}$, mJy/bm", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -238,7 +245,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\rm EVPA}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -252,7 +259,7 @@ class Simulation(object):
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{m}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -267,7 +274,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{P2}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -281,7 +288,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\rm EVPA2}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -295,7 +302,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{m2}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -309,7 +316,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\sigma_{\rm EVPA}}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -323,7 +330,7 @@ class Simulation(object):
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\sigma_{m}}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -333,10 +340,10 @@ class Simulation(object):
 
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
-        max_bias_value = np.nanmax(np.abs(bias))
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$b_{I}$, mJy/bm", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -346,10 +353,10 @@ class Simulation(object):
 
         bias = biases_dict["PPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
-        max_bias_value = np.nanmax(np.abs(bias))
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
@@ -362,7 +369,7 @@ class Simulation(object):
         max_bias_value = np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=self.common_beam, close=False,
+                    blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$b_{m}$", show_beam=True,
                     show=True, cmap='bwr', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
