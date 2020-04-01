@@ -15,6 +15,7 @@ from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files
 from stack import Stack
 import matplotlib.pyplot as plt
 import sys
+# FIXME: Substitute with your local path
 sys.path.insert(0, '/home/ilya/github/ve/vlbi_errors')
 from from_fits import create_clean_image_from_fits_file
 from image import plot as iplot
@@ -390,6 +391,12 @@ class Simulation(object):
 
 if __name__ == "__main__":
 
+    # Directory on calculon (jet mirror) to save results
+    jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
+    # Create it if not exists
+    if not os.path.exists(jet_dir):
+        os.mkdir(jet_dir)
+
     if len(sys.argv) == 1:
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
@@ -415,9 +422,6 @@ if __name__ == "__main__":
 
     n_epochs_not_masked_min = 1
     n_epochs_not_masked_min_std = 5
-
-    # Directory on calculon (jet mirror) to save results
-    jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,

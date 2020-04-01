@@ -244,38 +244,6 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
         return hp_low, frac
 
 
-# def create_std_image(mc_images, n_epochs_not_masked_min=3):
-#     """
-#     :param mc_images:
-#         List of masked 2D numpy arrays.
-#     :param n_epochs_not_masked_min: (default: ``3``)
-#         Integer. Minimal number of unmasked pixels in stack of pixels for not
-#         including this stack pixel in resulting mask.
-#     :return:
-#         Masked 2D numpy array with std values.
-#
-#     """
-#     mask = gen_mask(mc_images, n_epochs_not_masked_min)
-#     result = mad_std(np.ma.dstack(mc_images), axis=2)
-#     return np.ma.array(result, mask=mask)
-#
-#
-# def create_mean_image(mc_images, n_epochs_not_masked_min=3):
-#     """
-#     :param mc_images:
-#         List of masked 2D numpy arrays.
-#     :param n_epochs_not_masked_min: (default: ``3``)
-#         Integer. Minimal number of unmasked pixels in stack of pixels for not
-#         including this stack pixel in resulting mask.
-#     :return:
-#         Masked 2D numpy array with mean values.
-#
-#     """
-#     mask = gen_mask(mc_images, n_epochs_not_masked_min)
-#     result = np.ma.mean(np.ma.dstack(mc_images), axis=2)
-#     return np.ma.array(result, mask=mask)
-
-
 def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False):
     """
     Find mask using stokes 'I' map and 'PPOL' map using specified number of
