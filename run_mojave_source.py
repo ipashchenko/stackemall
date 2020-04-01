@@ -404,7 +404,7 @@ if __name__ == "__main__":
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
     # Path to Dan Homan CLEAN-ing script
-    path_to_clean_script = "/home/ilya/github/stackemall/final_clean"
+    path_to_clean_script = "final_clean"
 
     sigma_scale_amplitude = 0.035
     noise_scale = 1.0
