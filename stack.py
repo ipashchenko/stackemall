@@ -415,7 +415,7 @@ class Stack(object):
                         beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
                         show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
                         contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-            fig.savefig(os.path.join(outdir, "{}_vpol_rel.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            fig.savefig(os.path.join(outdir, "{}_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
             plt.close()
 
 

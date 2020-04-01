@@ -37,6 +37,10 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     # Pictures of original stacks
     for item in ("ppol", "fpol", "ppol2", "fpol2", "pangstd", "fpolstd", "nepochs"):
         files.append("{}_original_{}.png".format(source, item))
+
+    if os.path.exists(os.path.join(calculon_dir, "{}_original_vpol.png".format(source))):
+        files.append("{}_original_vpol.png".format(source))
+
     # Pictures of errors
     for item in ("ipol", "ppol", "fpol", "pang", "ppol2", "fpol2", "pang2", "pangstd", "fpolstd"):
         files.append("{}_{}_errors.png".format(source, item))
@@ -53,6 +57,9 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
     files.append("{}_original_stack_I_mask.fits".format(source))
     files.append("{}_original_stack_P_mask.fits".format(source))
 
+    if os.path.exists(os.path.join(calculon_dir, "{}_original_stack_V.fits".format(source))):
+        files.append("{}_original_stack_V.fits".format(source))
+
     # Biases
     files.append("{}_stack_biases.npz".format(source))
     for stokes in ("I", "PPOL", "FPOL"):
@@ -67,7 +74,8 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
 class Simulation(object):
     def __init__(self, source, n_mc, common_mapsize_clean, common_beam,
                  source_epoch_core_offset_file, working_dir,
-                 path_to_clean_script, remove_artificial_uvfits_files=True):
+                 path_to_clean_script, remove_artificial_uvfits_files=True,
+                 create_original_V_stack=False):
         self.source = source
         self.n_mc = n_mc
         self.common_mapsize_clean = common_mapsize_clean
@@ -89,6 +97,7 @@ class Simulation(object):
         # Template image
         self.some_image = None
         self.remove_artificial_uvfits_files = remove_artificial_uvfits_files
+        self.create_original_V_stack = create_original_V_stack
 
     def create_artificial_uvdata(self, sigma_scale_amplitude, noise_scale,
                                  sigma_evpa_deg, VLBA_residual_Dterms_file):
@@ -111,7 +120,8 @@ class Simulation(object):
                       working_dir=self.working_dir, create_stacks=True,
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
-                      n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
+                      n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
+                      use_V=self.create_original_V_stack)
         stack.save_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.plot_stack_images("{}_original".format(self.source),
@@ -383,7 +393,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
-    n_mc = 50
+    n_mc = 30
     remove_artificial_uvfits_files = True
     common_mapsize_clean = choose_mapsize(source)
     common_beam = get_beam_info(source)
@@ -412,7 +422,8 @@ if __name__ == "__main__":
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,
                             path_to_clean_script=path_to_clean_script,
-                            remove_artificial_uvfits_files=remove_artificial_uvfits_files)
+                            remove_artificial_uvfits_files=remove_artificial_uvfits_files,
+                            create_original_V_stack=False)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
