@@ -398,7 +398,7 @@ if __name__ == "__main__":
     common_mapsize_clean = choose_mapsize(source)
     common_beam = get_beam_info(source)
     # File with source, epoch, core offsets
-    source_epoch_core_offset_file = "/home/ilya/github/stackemall/core_offsets.txt"
+    source_epoch_core_offset_file = "core_offsets.txt"
     # Directory to save intermediate results
     working_dir = "/home/ilya/github/stackemall/data/{}".format(source)
     if not os.path.exists(working_dir):
