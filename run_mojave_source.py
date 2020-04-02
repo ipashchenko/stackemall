@@ -390,7 +390,7 @@ class Simulation(object):
 
 if __name__ == "__main__":
 
-    # Directory on calculon (jet mirror) to save results
+    # Directory on CALCULON (JET mirror) to save results
     jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
     # Create it if not exists
     if not os.path.exists(jet_dir):
@@ -400,26 +400,34 @@ if __name__ == "__main__":
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
     n_mc = 30
+    # Remove created artificial UVFITS files to save disk space?
     remove_artificial_uvfits_files = True
     common_mapsize_clean = choose_mapsize(source)
     common_beam = get_beam_info(source)
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
     # Directory to save intermediate results
+    if not os.path.exists("data"):
+        os.mkdir("data")
     working_dir = "data/{}".format(source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
     # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "final_clean"
 
+    # Residual uncertainty in the scale of the gain amplitudes
     sigma_scale_amplitude = 0.035
+    # Scale to thermal noise estimated from data (1.0 => keep those found in
+    # data)
     noise_scale = 1.0
-    # MOJAVE VIII
+    # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper)
     sigma_evpa_deg = 3.0
     # File with D-terms residuals for VLBA & Eff.
     VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
-
+    # Number of non-masked epochs in pixel to consider when calculating means.
     n_epochs_not_masked_min = 1
+    # Number of non-masked epochs in pixel to consider when calculating errors
+    # or stds of PANG, FPOL.
     n_epochs_not_masked_min_std = 5
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
