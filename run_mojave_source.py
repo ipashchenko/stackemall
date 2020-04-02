@@ -252,9 +252,9 @@ class Simulation(object):
         # PANG
         error = errors_dict["PANG"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\rm EVPA}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -281,9 +281,9 @@ class Simulation(object):
         # PPOL2
         error = errors_dict["PPOL2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{P2}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -295,9 +295,9 @@ class Simulation(object):
         # PANG2
         error = errors_dict["PANG2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\rm EVPA2}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -309,9 +309,9 @@ class Simulation(object):
         # FPOL2
         error = errors_dict["FPOL2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{m2}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -323,9 +323,9 @@ class Simulation(object):
         # STDPANG
         error = errors_dict["PANGSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\sigma_{\rm EVPA}}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
@@ -337,9 +337,9 @@ class Simulation(object):
         # STDFPOL
         error = errors_dict["FPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
                     colorbar_label=r"$\sigma_{\sigma_{m}}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
