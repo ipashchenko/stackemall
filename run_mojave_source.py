@@ -281,11 +281,11 @@ class Simulation(object):
         # PPOL2
         error = errors_dict["PPOL2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
                     blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{P2}$", show_beam=True,
+                    colorbar_label=r"$\sigma_{P2}$, mJy/bm", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ppol2_errors.png".format(self.source)),
