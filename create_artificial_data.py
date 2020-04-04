@@ -157,6 +157,9 @@ class ArtificialDataCreator(object):
             models = [models[stokes] for stokes in ("I", "Q", "U",)]
         uvdata.substitute(models)
 
+        print("   * adding noise...")
+        uvdata.noise_add(noise)
+
         if d_term is not None:
             # Getting dictionary with keys - [antenna name][integer of IF]["R"/"L"]
             # and values - complex D-terms.
@@ -173,9 +176,6 @@ class ArtificialDataCreator(object):
             scale_l = 1.0+np.random.normal(0, sigma_scale_amplitude, size=1)[0]
             scale_r = 1.0+np.random.normal(0, sigma_scale_amplitude, size=1)[0]
             uvdata.scale_hands(scale_r=scale_r, scale_l=scale_l)
-
-        print("   * adding noise...")
-        uvdata.noise_add(noise)
 
         uvf_savename = os.path.split(self.uvfits_file)[-1]
         uvf_savename = "artificial_" + uvf_savename
