@@ -385,8 +385,8 @@ class Stack(object):
         ppol_mask = self.stack_images["P_mask"]
 
         std = find_image_std(ipol_image.image, beam_npixels=self._npixels_beam)
-        blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=4*std,
-                             min_area_pix=2*self._npixels_beam, delta=10)
+        blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=6*std,
+                             min_area_pix=4*self._npixels_beam, delta=10)
 
         print("Plotting stack images with blc={}, trc={}".format(blc, trc))
 
