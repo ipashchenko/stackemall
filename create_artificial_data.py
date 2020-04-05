@@ -24,6 +24,8 @@ def rename_mc_stack_files(dir_all_files, mojave_format=True):
         if os.path.exists("artificial_{}".format(realization)):
             continue
         os.mkdir("artificial_{}".format(realization))
+    os.chdir(cwd)
+
     for fn in all_stack_files:
         realization = fn.split('_')[1]
         if mojave_format:
@@ -34,7 +36,6 @@ def rename_mc_stack_files(dir_all_files, mojave_format=True):
         print("Moving {}".format(fn))
         shutil.move(os.path.join(dir_all_files, fn),
                     os.path.join(dir_all_files, "artificial_{}".format(realization), original_fn))
-    os.chdir(cwd)
 
 
 def downscale_uvdata_by_freq(uvdata):
