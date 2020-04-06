@@ -18,9 +18,9 @@ from astropy.stats import mad_std
 
 class Stack(object):
     def __init__(self, uvfits_files, mapsize_clean, beam, path_to_clean_script,
-                 shifts=None, working_dir=None, create_stacks=True,
-                 n_epochs_not_masked_min=1, n_epochs_not_masked_min_std=5,
-                 use_V=False):
+                 shifts=None, shifts_circ_std=None, working_dir=None,
+                 create_stacks=True, n_epochs_not_masked_min=1,
+                 n_epochs_not_masked_min_std=5, use_V=False):
         """
         :param uvfits_files:
             Iterable of UVFITS files with self-calibrated and D-terms corrected data.
@@ -32,6 +32,10 @@ class Stack(object):
             Path to Dan Homan CLEANing script.
         :param shifts: (optional)
             Iterable of shifts to apply to maps. If ``None`` than do not apply shifts.
+            (default: ``None``)
+        :param shifts_circ_std: (optional)
+            Std of circular Gaussian distribution (in mas) to use to model error in the
+            derived core shifts. If ``None`` then do not model this error.
             (default: ``None``)
         :param working_dir: (optional)
             Directory for storing files. If ``None`` than use CWD. (default: ``None``)
@@ -62,6 +66,7 @@ class Stack(object):
         self.uvfits_files = uvfits_files
         self.n_data = len(self.uvfits_files)
         self.shifts = shifts
+        self.shifts_circ_std = shifts_circ_std
         self.mapsize_clean = mapsize_clean
         self.beam = beam
         self._npixels_beam = np.pi*beam[0]*beam[1]/mapsize_clean[1]**2
@@ -112,6 +117,10 @@ class Stack(object):
         for i, uvfits_file in enumerate(self.uvfits_files):
             if self.shifts is not None:
                 shift = self.shifts[i]
+                if self.shifts_circ_std is not None:
+                    delta_x = np.random.normal(0, self.shifts_circ_std, size=1)[0]
+                    delta_y = np.random.normal(0, self.shifts_circ_std, size=1)[0]
+                    shift = (shift[0] + delta_x, shift[1] + delta_y)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
             else:
                 shift = None

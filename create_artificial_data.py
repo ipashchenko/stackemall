@@ -103,9 +103,6 @@ class ArtificialDataCreator(object):
         print("Cleaning uv-data with the same parameters: mapsize = {}, beam = {}".format(self.mapsize_clean, self.beam))
         if self.shift is not None:
             shift = self.shift
-            delta_x = np.random.normal(0, 0.1, size=1)[0]
-            delta_y = np.random.normal(0, 0.1, size=1)[0]
-            shift = (shift[0]+delta_x, shift[1]+delta_y)
         else:
             shift = None
         print("UVFITS {} shift = {}".format(self.uvfits_file, shift))

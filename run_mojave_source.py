@@ -75,7 +75,7 @@ class Simulation(object):
     def __init__(self, source, n_mc, common_mapsize_clean, common_beam,
                  source_epoch_core_offset_file, working_dir,
                  path_to_clean_script, remove_artificial_uvfits_files=True,
-                 create_original_V_stack=False):
+                 create_original_V_stack=False, shifts_circ_std=None):
         self.source = source
         self.n_mc = n_mc
         self.common_mapsize_clean = common_mapsize_clean
@@ -83,6 +83,7 @@ class Simulation(object):
         self._npixels_beam = np.pi*common_beam[0]*common_beam[1]/common_mapsize_clean[1]**2
         self.working_dir = working_dir
         self.path_to_clean_script = path_to_clean_script
+        self.shifts_circ_std = shifts_circ_std
         self.uvfits_files = list()
         self.shifts = list()
         df = parse_source_list(source_epoch_core_offset_file, source=source)
@@ -141,7 +142,8 @@ class Simulation(object):
             # Shifts are already inserted in artificial data
             stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam,
                           path_to_clean_script=self.path_to_clean_script,
-                          shifts=None, working_dir=data_dir, create_stacks=True,
+                          shifts=None, shifts_circ_std=self.shifts_circ_std,
+                          working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
@@ -353,7 +355,7 @@ class Simulation(object):
 
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
-        max_bias_value = 1000*np.nanmax(np.abs(bias))
+        max_bias_value = 0.2
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=beam, close=True,
@@ -425,6 +427,8 @@ if __name__ == "__main__":
     noise_scale = 1.0
     # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper)
     sigma_evpa_deg = 3.0
+    # Error of the core shift (mas)
+    shifts_circ_std = 0.1
     # File with D-terms residuals for VLBA & Eff.
     VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
     # Number of non-masked epochs in pixel to consider when calculating means.
@@ -437,7 +441,8 @@ if __name__ == "__main__":
                             source_epoch_core_offset_file, working_dir,
                             path_to_clean_script=path_to_clean_script,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
-                            create_original_V_stack=False)
+                            create_original_V_stack=False,
+                            shifts_circ_std=shifts_circ_std)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
