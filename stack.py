@@ -115,16 +115,25 @@ class Stack(object):
     def _clean_original_data_with_the_same_params(self):
         print("Cleaning uv-data with the same parameters: mapsize = {}, restore beam = {}".format(self.mapsize_clean, self.beam))
         for i, uvfits_file in enumerate(self.uvfits_files):
+
             if self.shifts is not None:
                 shift = self.shifts[i]
                 if self.shifts_circ_std is not None:
+                    print("Adding core shift uncertainty...")
                     delta_x = np.random.normal(0, self.shifts_circ_std, size=1)[0]
                     delta_y = np.random.normal(0, self.shifts_circ_std, size=1)[0]
                     shift = (shift[0] + delta_x, shift[1] + delta_y)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
+            elif self.shifts is None and self.shifts_circ_std is not None:
+                print("Adding core shift uncertainty...")
+                delta_x = np.random.normal(0, self.shifts_circ_std, size=1)[0]
+                delta_y = np.random.normal(0, self.shifts_circ_std, size=1)[0]
+                shift = (delta_x, delta_y)
+                print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
             else:
                 shift = None
                 print("Cleaning {} with no shift applied...".format(uvfits_file))
+
             for stokes in self.stokes:
                 print("Stokes {}".format(stokes))
                 clean_difmap(fname=uvfits_file, outfname="cc_{}_{}.fits".format(stokes, str(i+1).zfill(3)),
