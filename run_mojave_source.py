@@ -253,6 +253,7 @@ class Simulation(object):
         error = errors_dict["PANG"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest = np.rad2deg(highest)
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
@@ -296,6 +297,7 @@ class Simulation(object):
         error = errors_dict["PANG2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest = np.rad2deg(highest)
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
@@ -324,6 +326,7 @@ class Simulation(object):
         error = errors_dict["PANGSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        highest = np.rad2deg(highest)
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
