@@ -228,7 +228,7 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
         percents). (default: ``95``)
     :return:
     """
-    mstd = mad_std(data)
+    mstd = mad_std(np.ma.array(data, mask=np.isnan(data)))
     min_fraction_range = scoreatpercentile(data, min_fraction)
     hp_indexes = np.argsort(data)[::-1][np.argsort(np.diff(np.sort(data)[::-1]))]
     for ind in hp_indexes:
