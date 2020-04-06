@@ -355,7 +355,7 @@ class Simulation(object):
 
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
-        max_bias_value = 0.2
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
         fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=beam, close=True,
@@ -381,7 +381,7 @@ class Simulation(object):
 
         bias = biases_dict["FPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
-        max_bias_value = np.nanmax(np.abs(bias))
+        max_bias_value = 0.2
         fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
                     blc=blc, trc=trc, beam=beam, close=True,
