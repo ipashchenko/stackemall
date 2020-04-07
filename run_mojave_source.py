@@ -22,7 +22,9 @@ from image import plot as iplot
 
 def move_result_files_to_jet(source, calculon_dir, jet_dir):
     """
-    Move result files from CALCULON to jet
+    Move result files from CALCULON to jet.
+
+    This can be used to move some resulting files to specified place.
 
     :param source:
         Name of the source. Corresponding directory will be created if necessary.
@@ -395,12 +397,6 @@ class Simulation(object):
 
 if __name__ == "__main__":
 
-    # Directory on CALCULON (JET mirror) to save results
-    jet_dir = "/mnt/jet1/ilya/MOJAVE_pol_stacking"
-    # Create it if not exists
-    if not os.path.exists(jet_dir):
-        os.mkdir(jet_dir)
-
     if len(sys.argv) == 1:
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
@@ -412,9 +408,7 @@ if __name__ == "__main__":
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
     # Directory to save intermediate results
-    if not os.path.exists("data"):
-        os.mkdir("data")
-    working_dir = "data/{}".format(source)
+    working_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/{}".format(source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
     # Path to Dan Homan CLEAN-ing script
@@ -448,7 +442,6 @@ if __name__ == "__main__":
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_errors_images()
-    move_result_files_to_jet(source, working_dir, jet_dir)
 
     npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
     for npz_file in npz_files:
