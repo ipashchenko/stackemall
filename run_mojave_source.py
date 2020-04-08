@@ -10,7 +10,7 @@ import astropy.io.fits as pf
 from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize,
                          find_image_std, find_bbox, stat_of_masked,
                          choose_range_from_positive_tailed_distribution,
-                         get_beam_info)
+                         get_beam_info_by_dec)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
 import matplotlib.pyplot as plt
@@ -404,7 +404,8 @@ if __name__ == "__main__":
     # Remove created artificial UVFITS files to save disk space?
     remove_artificial_uvfits_files = True
     common_mapsize_clean = choose_mapsize(source)
-    common_beam = get_beam_info(source)
+    beam_size = get_beam_info_by_dec(source)
+    common_beam = (beam_size, beam_size, 0)
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
     # Directory to save intermediate results
