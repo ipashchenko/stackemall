@@ -1,3 +1,5 @@
+import os
+import shutil
 import numpy as np
 import pandas as pd
 from scipy.ndimage.measurements import label
@@ -7,6 +9,22 @@ from scipy.stats import percentileofscore, scoreatpercentile
 from scipy.stats import circstd, circmean
 from astropy.stats import mad_std
 from pycircstat import mean, std
+
+
+def get_sources_with_failed_jobs(logfile):
+    failed_sources = list()
+    df = pd.read_csv(logfile, sep="\t")
+    for row in df.query("Exitval == 1")["Command"].values:
+        failed_sources.append(row.split(" ")[-1])
+    return failed_sources
+
+
+def remove_dirs_with_failed_jobs(logfile, working_dir="/mnt/storage/ilya/MOJAVE_pol_stacking"):
+    failed_sources = get_sources_with_failed_jobs(logfile)
+    for source in failed_sources:
+        dir_to_rm = os.path.join(working_dir, source)
+        print("Removig directory ", dir_to_rm)
+        shutil.rmtree(dir_to_rm)
 
 
 def get_beam_info_by_dec(source):
