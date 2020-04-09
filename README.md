@@ -33,3 +33,13 @@ However, in ``__main__`` part of the script one can change:
 * ``n_mc`` - number of realizations.
 * ``sigma_scale_amplitude``, ``noise_scale``, ``sigma_evpa_deg`` - parameters of the residual noise added. See code for explanation.
 * ``n_epochs_not_masked_min`` & ``n_epochs_not_masked_min_std`` - minimal number of non-masked epochs for calculating means and stds.
+
+## Using GNU parallel
+Suppose we have a column of source names to process in a file ``sources_to_process.txt``. Then to run processing in 20
+parallel jobs one can use:
+```bash
+$ parallel --files --results result_{1} --retry-failed --bar --joblog /home/ilya/github/stackemall/log --jobs 20 -a sources_to_process_short.txt "python run_mojave_source.py"
+
+``` 
+Here for each source ``stdout`` and ``stderr`` will be redirected to ``result_source.seq`` and ``result_source.err`` files. The result exit status (with timing)
+will be logged in file ``log``. Is some jobs are failed ``--retry--failed`` can be used to re-run them (with fixed python code).
