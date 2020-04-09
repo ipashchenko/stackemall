@@ -260,7 +260,10 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
     hp_indexes = np.argsort(data)[::-1][np.argsort(np.diff(np.sort(data)[::-1]))]
     for ind in hp_indexes:
         hp = data[ind]
-        hp_low = np.sort(data)[hp - np.sort(data) > 0][-1]
+        try:
+            hp_low = np.sort(data)[hp - np.sort(data) > 0][-1]
+        except IndexError:
+            return min_fraction_range, 95
         diff = hp - hp_low
         frac = percentileofscore(data, hp_low)
         if diff < mstd/2 and frac < 95:
