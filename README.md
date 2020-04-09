@@ -2,7 +2,8 @@
 Code for creating stacks of polarization VLBI maps and their uncertainty analysis. 
 
 ## Requirements
-These are mostly from dependencies of ``ve`` submodule: ``astropy``, ``scikit-image``, ``scikit-learn``, ``numpy``. ``scipy``, ``pycircstat``, ``matplotlib`` (this list can be incomplete!)
+These are mostly from dependencies of ``ve`` submodule: ``astropy``, ``scikit-image``, ``scikit-learn``, ``numpy``. ``scipy``, ``pycircstat``, ``matplotlib`` (this list can be incomplete!).
+``GNU parallel`` is used to parallelize the workflow for hundreds of sources.
 
 ## Installation
 ```
@@ -10,17 +11,16 @@ git clone --recurse-submodules git@github.com:ipashchenko/stackemall.git
 ```
 
 ## Files
-* ``stack.py`` handles stacking process: creating, saving and plotting stack images.
-
-* ``create_artificial_data.py`` replicates multiepoch UVFITS files using CLEAN-models of the original data and specified errors.
-
-* ``stack_utils.py`` keeps utility functions used by all other modules.
-
-* ``run_mojave_source.py`` implements the workflow. The only necessary thing to fill in this script is
+* ``stack.py`` - handles stacking process: creating, saving and plotting stack images.
+* ``create_artificial_data.py`` - replicates multiepoch UVFITS files using CLEAN-models of the original data and specified error models.
+* ``stack_utils.py`` - keeps utility functions used by all other modules.
+* ``run_mojave_source.py`` - implements the workflow. The only necessary thing to fill in this script is
 ``results_dir`` - directory to store the results (e.g. ``/mnt/storage/ilya/MOJAVE_pol_stacking``).
 * ``core_effsets.txt`` - file with sources, epochs and core offsets used to align multiepoch images. It is also used to infer the number of epochs in stack for given source.
 * ``VLBA_EB_residuals_D.json`` - file with residual D-terms estimates for each antenna. Used to model residual D-term uncertainty.  
-
+* ``final_clean`` - version of D. Homan ``difmap`` final CLEAN script used in the analysis of MOJAVE polarization stacks.
+* ``source_dec.txt`` - file with declinations of sources. Used to calculate common circular beam. Based on M. Lister fits of cubic polynomial to all sources.
+* ``sources_to_process.txt`` - file with sources to process in parallel jobs using ``GNU parallel``.
 
 ## Usage
 Script ``run_mojave_source.py`` used to run simulations has only one positional argument - source B1950 name:
