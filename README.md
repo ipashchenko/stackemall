@@ -39,6 +39,6 @@ parallel jobs one can use:
 $ parallel --files --results result_{1} [--retry-failed] --joblog /home/ilya/github/stackemall/log --jobs 20 -a sources_to_process_short.txt "python run_mojave_source.py"
 
 ``` 
-Here for source ``mysource`` data streams``stdout`` and ``stderr`` will be redirected to ``result_mysource.seq`` and ``result_mysource.err`` files. The result exit status (with timing)
+Here for source ``mysource`` data streams``stdout`` and ``stderr`` will be redirected to ``result_mysource`` and ``result_mysource.err`` files. The result exit status (with timing)
 will be logged in file ``log``. If some jobs are failed ``--retry--failed`` can be used to re-run them (after fixing the problem that caused failure). However, directories with intermediate results for the failed
 sources should be removed using ``stack_utils.remove_dirs_with_failed_jobs`` function.
