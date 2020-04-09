@@ -10,8 +10,6 @@ git clone --recurse-submodules git@github.com:ipashchenko/stackemall.git
 ```
 
 ## Files
-Supposed to be run on ``CALCULON`` server. 
-
 * ``stack.py`` handles stacking process: creating, saving and plotting stack images.
 
 * ``create_artificial_data.py`` replicates multiepoch UVFITS files using CLEAN-models of the original data and specified errors.
@@ -19,7 +17,7 @@ Supposed to be run on ``CALCULON`` server.
 * ``stack_utils.py`` keeps utility functions used by all other modules.
 
 * ``run_mojave_source.py`` implements the workflow. The only necessary thing to fill in this script is
-``jet_dir`` - directory on ``CALCULON`` mirrot of ``jet`` machine. It will be used to store the results (e.g. ``/mnt/jet1/ilya/MOJAVE_pol_stacking``).
+``results_dir`` - directory to store the results (e.g. ``/mnt/storage/ilya/MOJAVE_pol_stacking``).
 * ``core_effsets.txt`` - file with sources, epochs and core offsets used to align multiepoch images. It is also used to infer the number of epochs in stack for given source.
 * ``VLBA_EB_residuals_D.json`` - file with residual D-terms estimates for each antenna. Used to model residual D-term uncertainty.  
 
@@ -37,9 +35,10 @@ However, in ``__main__`` part of the script one can change:
 ## Using GNU parallel
 Suppose we have a column of source names to process in a file ``sources_to_process.txt``. Then to run processing in 20
 parallel jobs one can use:
-```bash
-$ parallel --files --results result_{1} --retry-failed --bar --joblog /home/ilya/github/stackemall/log --jobs 20 -a sources_to_process_short.txt "python run_mojave_source.py"
+```
+$ parallel --files --results result_{1} [--retry-failed] --joblog /home/ilya/github/stackemall/log --jobs 20 -a sources_to_process_short.txt "python run_mojave_source.py"
 
 ``` 
-Here for each source ``stdout`` and ``stderr`` will be redirected to ``result_source.seq`` and ``result_source.err`` files. The result exit status (with timing)
-will be logged in file ``log``. Is some jobs are failed ``--retry--failed`` can be used to re-run them (with fixed python code).
+Here for source ``mysource`` data streams``stdout`` and ``stderr`` will be redirected to ``result_mysource.seq`` and ``result_mysource.err`` files. The result exit status (with timing)
+will be logged in file ``log``. If some jobs are failed ``--retry--failed`` can be used to re-run them (after fixing the problem that caused failure). However, directories with intermediate results for the failed
+sources should be removed using ``stack_utils.remove_dirs_with_failed_jobs`` function.

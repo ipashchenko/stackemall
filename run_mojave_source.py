@@ -409,7 +409,8 @@ if __name__ == "__main__":
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
     # Directory to save intermediate results
-    working_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/{}".format(source)
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking"
+    working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
     # Path to Dan Homan CLEAN-ing script
