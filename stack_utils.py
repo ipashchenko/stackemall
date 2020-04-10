@@ -24,7 +24,10 @@ def remove_dirs_with_failed_jobs(logfile, working_dir="/mnt/storage/ilya/MOJAVE_
     for source in failed_sources:
         dir_to_rm = os.path.join(working_dir, source)
         print("Removig directory ", dir_to_rm)
-        shutil.rmtree(dir_to_rm)
+        try:
+            shutil.rmtree(dir_to_rm)
+        except FileNotFoundError:
+            print("No directory {} found! Skipping.".format(dir_to_rm))
 
 
 def get_beam_info_by_dec(source):
