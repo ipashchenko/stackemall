@@ -14,8 +14,13 @@ from pycircstat import mean, std
 def get_sources_with_failed_jobs(logfile):
     failed_sources = list()
     df = pd.read_csv(logfile, sep="\t")
-    for row in df.query("Exitval == 1")["Command"].values:
-        failed_sources.append(row.split(" ")[-1])
+    df = df.sort_values(["Seq", "Starttime"])
+    gb = df.groupby("Command")
+    for state, frame in gb:
+        source = state.split(" ")[-1]
+        last_exit_val = frame.tail(1)["Exitval"].values[0]
+        if last_exit_val == 1:
+            failed_sources.append(source)
     return failed_sources
 
 
