@@ -3,7 +3,7 @@ Code for creating stacks of polarization VLBI maps and their uncertainty analysi
 
 ## Requirements
 These are mostly from dependencies of ``ve`` submodule: ``astropy``, ``scikit-image``, ``scikit-learn``, ``numpy``. ``scipy``, ``pycircstat``, ``matplotlib`` (this list can be incomplete!).
-``GNU parallel`` is used to parallelize the workflow for hundreds of sources.
+``GNU parallel`` is used to parallelize the workflow for hundreds of sources. ``Difmap`` is used to CLEAN ``UVFITS`` visibility data sets.
 
 ## Installation
 ```
