@@ -18,7 +18,7 @@ from astropy.stats import mad_std
 
 class Stack(object):
     def __init__(self, uvfits_files, mapsize_clean, beam, path_to_clean_script,
-                 shifts=None, shifts_circ_std=None, working_dir=None,
+                 shifts=None, shifts_ell_std=None, working_dir=None,
                  create_stacks=True, n_epochs_not_masked_min=1,
                  n_epochs_not_masked_min_std=5, use_V=False):
         """
@@ -33,10 +33,10 @@ class Stack(object):
         :param shifts: (optional)
             Iterable of shifts to apply to maps. If ``None`` than do not apply shifts.
             (default: ``None``)
-        :param shifts_circ_std: (optional)
-            Std of circular Gaussian distribution (in mas) to use to model error in the
-            derived core shifts. If ``None`` then do not model this error.
-            (default: ``None``)
+        :param shifts_ell_std: (optional)
+            Iterable of stds of 2D Gaussian distribution (maj[mas], min[mas],
+            bpa[deg]) to use to model error in the derived core shifts. If
+            ``None`` then do not model this error. (default: ``None``)
         :param working_dir: (optional)
             Directory for storing files. If ``None`` than use CWD. (default: ``None``)
         :param create_stacks: (optional)
@@ -53,6 +53,15 @@ class Stack(object):
             Boolean. Consider Stokes V stacking? (default: ``None`)
 
         """
+
+        # Check input data consistency
+        if shifts is not None:
+            assert len(shifts) == len(uvfits_files)
+        if shifts_ell_std is not None:
+            assert len(shifts_ell_std) == len(uvfits_files)
+        if path_to_clean_script is None:
+            raise Exception("Specify path to CLEAN script!")
+
         self.stokes = ("I", "Q", "U")
         if use_V:
             self.stokes = ("I", "Q", "U", "V")
@@ -66,12 +75,11 @@ class Stack(object):
         self.uvfits_files = uvfits_files
         self.n_data = len(self.uvfits_files)
         self.shifts = shifts
-        self.shifts_circ_std = shifts_circ_std
+        self.shifts_ell_std = shifts_ell_std
         self.mapsize_clean = mapsize_clean
         self.beam = beam
         self._npixels_beam = np.pi*beam[0]*beam[1]/mapsize_clean[1]**2
-        if path_to_clean_script is None:
-            raise Exception("Specify path to CLEAN script!")
+
         self.path_to_clean_script = path_to_clean_script
         self.n_epochs_not_masked_min = n_epochs_not_masked_min
         self.n_epochs_not_masked_min_std = n_epochs_not_masked_min_std
@@ -118,17 +126,32 @@ class Stack(object):
 
             if self.shifts is not None:
                 shift = self.shifts[i]
-                if self.shifts_circ_std is not None:
+                if self.shifts_ell_std is not None:
+                    bmaj, bmin, bpa = self.shifts_ell_std[i]
+                    bpa = np.deg2rad(bpa)
                     print("Adding core shift uncertainty...")
-                    delta_x = np.random.normal(0, self.shifts_circ_std, size=1)[0]
-                    delta_y = np.random.normal(0, self.shifts_circ_std, size=1)[0]
-                    shift = (shift[0] + delta_x, shift[1] + delta_y)
+                    delta_x = np.random.normal(0, bmaj, size=1)[0]
+                    delta_y = np.random.normal(0, bmin, size=1)[0]
+                    # ``bpa`` goes from North clockwise => bpa = 0 means maximal
+                    # shifts at DEC direction (``delta_y`` should be maximal)
+                    bpa += np.pi/2
+                    delta_x_rot = abs(delta_x*np.cos(bpa) - delta_y*np.sin(bpa))
+                    delta_y_rot = abs(delta_x*np.sin(bpa) + delta_y*np.cos(bpa))
+                    shift = (shift[0] + delta_x_rot, shift[1] + delta_y_rot)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
-            elif self.shifts is None and self.shifts_circ_std is not None:
+            elif self.shifts is None and self.shifts_ell_std is not None:
                 print("Adding core shift uncertainty...")
-                delta_x = np.random.normal(0, self.shifts_circ_std, size=1)[0]
-                delta_y = np.random.normal(0, self.shifts_circ_std, size=1)[0]
-                shift = (delta_x, delta_y)
+                bmaj, bmin, bpa = self.shifts_ell_std[i]
+                bpa = np.deg2rad(bpa)
+                print("Adding core shift uncertainty...")
+                delta_x = np.random.normal(0, bmaj, size=1)[0]
+                delta_y = np.random.normal(0, bmin, size=1)[0]
+                # ``bpa`` goes from North clockwise => bpa = 0 means maximal
+                # shifts at DEC direction (``delta_y`` should be maximal)
+                bpa += np.pi / 2
+                delta_x_rot = abs(delta_x*np.cos(bpa) - delta_y*np.sin(bpa))
+                delta_y_rot = abs(delta_x*np.sin(bpa) + delta_y*np.cos(bpa))
+                shift = (delta_x_rot, delta_y_rot)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
             else:
                 shift = None
