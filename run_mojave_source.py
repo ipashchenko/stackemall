@@ -11,7 +11,7 @@ import astropy.io.fits as pf
 from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize,
                          find_image_std, find_bbox, stat_of_masked,
                          choose_range_from_positive_tailed_distribution,
-                         get_beam_info_by_dec)
+                         get_beam_info_by_dec, get_inner_jet_PA)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
 import matplotlib.pyplot as plt
@@ -77,8 +77,36 @@ def move_result_files_to_jet(source, calculon_dir, jet_dir):
 class Simulation(object):
     def __init__(self, source, n_mc, common_mapsize_clean, common_beam,
                  source_epoch_core_offset_file, working_dir,
-                 path_to_clean_script, remove_artificial_uvfits_files=True,
-                 create_original_V_stack=False, shifts_ell_std=None):
+                 path_to_clean_script, shifts_errors_ell_bmaj,
+                 shifts_errors_ell_bmin, shifts_errors_PA_file,
+                 remove_artificial_uvfits_files=True,
+                 create_original_V_stack=False):
+        """
+        :param source:
+            String B1950 name of the source.
+        :param n_mc:
+            Number of realizations.
+        :param common_mapsize_clean:
+            Tuple of common image size and pixel size (mas).
+        :param common_beam:
+            Tuple of bmaj[mas], bmin[mas], bpa[deg] for common restoring beam.
+        :param source_epoch_core_offset_file:
+            File with source, epoch, core offset values.
+        :param working_dir:
+            Directory to store results.
+        :param path_to_clean_script:
+            Path to D. Homan difmap cleaning script.
+        :param shifts_errors_ell_bmaj:
+            Major axis of core shift error ellipse (mas).
+        :param shifts_errors_ell_bmin:
+            Minor axis of core shift error ellipse (mas).
+        :param shifts_errors_PA_file:
+            File with PA of inner jet for each source (possible epoch).
+        :param remove_artificial_uvfits_files: (optional)
+            Boolean. Remove created artificial UVFITS files? (default: ``True``)
+        :param create_original_V_stack: (optional)
+            Boolean. Create stacks of Stokes V? (default: ``False``)
+        """
         self.source = source
         self.n_mc = n_mc
         self.common_mapsize_clean = common_mapsize_clean
@@ -86,9 +114,9 @@ class Simulation(object):
         self._npixels_beam = np.pi*common_beam[0]*common_beam[1]/common_mapsize_clean[1]**2
         self.working_dir = working_dir
         self.path_to_clean_script = path_to_clean_script
-        self.shifts_ell_std = shifts_ell_std
         self.uvfits_files = list()
         self.shifts = list()
+        self.shifts_errors = list()
         df = parse_source_list(source_epoch_core_offset_file, source=source)
         df = df.drop_duplicates()
         for index, row in df.iterrows():
@@ -96,6 +124,11 @@ class Simulation(object):
             self.shifts.append((row['shift_ra'], row['shift_dec']))
             uvfits_file = "/mnt/jet1/yyk/VLBI/2cmVLBA/data/{}/{}/{}.u.{}.uvf".format(source, epoch, source, epoch)
             self.uvfits_files.append(uvfits_file)
+            # TODO: If per-epoch core shift errors are needed then change
+            #  implementation of this function
+            pa = get_inner_jet_PA(source, epoch, shifts_errors_PA_file)
+            self.shifts_errors.append((shifts_errors_ell_bmaj, shifts_errors_ell_bmin, pa))
+
         # Template header used for saving results in FITS format
         self.hdr = None
         # Template image
@@ -145,7 +178,7 @@ class Simulation(object):
             # Shifts are already inserted in artificial data
             stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam,
                           path_to_clean_script=self.path_to_clean_script,
-                          shifts=None, shifts_ell_std=self.shifts_ell_std,
+                          shifts=None, shifts_errors=self.shifts_errors,
                           working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
@@ -401,33 +434,49 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         raise Exception("Specify source as positional argument")
     source = sys.argv[1]
+
+    # Number of realizations
     n_mc = 30
+
     # Remove created artificial UVFITS files to save disk space?
     remove_artificial_uvfits_files = True
+
+    # Common map parameters
     common_mapsize_clean = choose_mapsize(source)
     beam_size = get_beam_info_by_dec(source)
     common_beam = (beam_size, beam_size, 0)
+
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
-    # Directory to save intermediate results
+
+    # Directory to save intermediate and final results
     results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking"
     working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
+
     # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "final_clean"
 
     # Residual uncertainty in the scale of the gain amplitudes
     sigma_scale_amplitude = 0.035
+
     # Scale to thermal noise estimated from data (1.0 => keep those found in
     # data)
     noise_scale = 1.0
+
     # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper)
     sigma_evpa_deg = 3.0
+
     # Error of the core shift (mas)
-    shifts_circ_std = 0.1
+    shifts_errors_ell_bmaj = 0.1
+    shifts_errors_ell_bmin = 0.1/3
+    # File with position angles of the inner jet (possibly per-epoch)
+    shifts_errors_PA_file = "PA_inner_jet.txt"
+
     # File with D-terms residuals for VLBA & Eff.
     VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
+
     # Number of non-masked epochs in pixel to consider when calculating means.
     n_epochs_not_masked_min = 1
     # Number of non-masked epochs in pixel to consider when calculating errors
@@ -436,10 +485,10 @@ if __name__ == "__main__":
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,
-                            path_to_clean_script=path_to_clean_script,
+                            path_to_clean_script, shifts_errors_ell_bmaj,
+                            shifts_errors_ell_bmin, shifts_errors_PA_file,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
-                            create_original_V_stack=False,
-                            shifts_ell_std=shifts_circ_std)
+                            create_original_V_stack=False)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)

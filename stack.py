@@ -3,6 +3,7 @@ matplotlib.use("Agg")
 import os
 import sys
 import numpy as np
+from collections import Mapping
 from stack_utils import (pol_mask, stat_of_masked, find_image_std, find_bbox,
                          correct_ppol_bias, image_of_nepochs_not_masked)
 sys.path.insert(0, 've/vlbi_errors')
@@ -18,7 +19,7 @@ from astropy.stats import mad_std
 
 class Stack(object):
     def __init__(self, uvfits_files, mapsize_clean, beam, path_to_clean_script,
-                 shifts=None, shifts_ell_std=None, working_dir=None,
+                 shifts=None, shifts_errors=None, working_dir=None,
                  create_stacks=True, n_epochs_not_masked_min=1,
                  n_epochs_not_masked_min_std=5, use_V=False):
         """
@@ -33,10 +34,10 @@ class Stack(object):
         :param shifts: (optional)
             Iterable of shifts to apply to maps. If ``None`` than do not apply shifts.
             (default: ``None``)
-        :param shifts_ell_std: (optional)
-            Iterable of stds of 2D Gaussian distribution (maj[mas], min[mas],
-            bpa[deg]) to use to model error in the derived core shifts. If
-            ``None`` then do not model this error. (default: ``None``)
+        :param shifts_errors: (optional)
+            Iterable of the parameters of 2D Gaussian distribution (maj[mas], min[mas], bpa[deg])
+            to use to model error in the derived core shifts. If ``None`` then do not model this
+            error. (default: ``None``)
         :param working_dir: (optional)
             Directory for storing files. If ``None`` than use CWD. (default: ``None``)
         :param create_stacks: (optional)
@@ -57,8 +58,8 @@ class Stack(object):
         # Check input data consistency
         if shifts is not None:
             assert len(shifts) == len(uvfits_files)
-        if shifts_ell_std is not None:
-            assert len(shifts_ell_std) == len(uvfits_files)
+        if shifts_errors is not None:
+            assert len(shifts_errors) == len(uvfits_files)
         if path_to_clean_script is None:
             raise Exception("Specify path to CLEAN script!")
 
@@ -75,7 +76,7 @@ class Stack(object):
         self.uvfits_files = uvfits_files
         self.n_data = len(self.uvfits_files)
         self.shifts = shifts
-        self.shifts_ell_std = shifts_ell_std
+        self.shifts_errors = shifts_errors
         self.mapsize_clean = mapsize_clean
         self.beam = beam
         self._npixels_beam = np.pi*beam[0]*beam[1]/mapsize_clean[1]**2
@@ -126,10 +127,10 @@ class Stack(object):
 
             if self.shifts is not None:
                 shift = self.shifts[i]
-                if self.shifts_ell_std is not None:
-                    bmaj, bmin, bpa = self.shifts_ell_std[i]
+                if self.shifts_errors is not None:
+                    bmaj, bmin, bpa = self.shifts_errors[i]
                     bpa = np.deg2rad(bpa)
-                    print("Adding core shift uncertainty...")
+                    print("Adding core shift uncertainty using error ellipse with bmaj, bmin, bpa = {}, {}, {}...".format(bmaj, bmin, bpa))
                     delta_x = np.random.normal(0, bmaj, size=1)[0]
                     delta_y = np.random.normal(0, bmin, size=1)[0]
                     # ``bpa`` goes from North clockwise => bpa = 0 means maximal
@@ -139,11 +140,10 @@ class Stack(object):
                     delta_y_rot = abs(delta_x*np.sin(bpa) + delta_y*np.cos(bpa))
                     shift = (shift[0] + delta_x_rot, shift[1] + delta_y_rot)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
-            elif self.shifts is None and self.shifts_ell_std is not None:
-                print("Adding core shift uncertainty...")
-                bmaj, bmin, bpa = self.shifts_ell_std[i]
+            elif self.shifts is None and self.shifts_errors is not None:
+                bmaj, bmin, bpa = self.shifts_errors[i]
                 bpa = np.deg2rad(bpa)
-                print("Adding core shift uncertainty...")
+                print("Adding core shift uncertainty using error ellipse with bmaj, bmin, bpa = {}, {}, {}...".format(bmaj, bmin, bpa))
                 delta_x = np.random.normal(0, bmaj, size=1)[0]
                 delta_y = np.random.normal(0, bmin, size=1)[0]
                 # ``bpa`` goes from North clockwise => bpa = 0 means maximal

@@ -11,6 +11,13 @@ from astropy.stats import mad_std
 from pycircstat import mean, std
 
 
+# TODO: If per-epoch core shift errors are needed then change
+#  implementation of this function
+def get_inner_jet_PA(source, epoch, inner_jet_PA_file):
+    df = pd.read_csv(inner_jet_PA_file, delim_whitespace=True, names=["source", "pa_comp", "sigma_pa_comp", "pa_ridge"])
+    return df.query("source == @source")["pa_ridge"].values[0]
+
+
 def get_sources_with_failed_jobs(logfile):
     failed_sources = list()
     df = pd.read_csv(logfile, sep="\t")
