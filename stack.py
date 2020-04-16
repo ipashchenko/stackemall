@@ -136,8 +136,8 @@ class Stack(object):
                     # ``bpa`` goes from North clockwise => bpa = 0 means maximal
                     # shifts at DEC direction (``delta_y`` should be maximal)
                     bpa += np.pi/2
-                    delta_x_rot = abs(delta_x*np.cos(bpa) - delta_y*np.sin(bpa))
-                    delta_y_rot = abs(delta_x*np.sin(bpa) + delta_y*np.cos(bpa))
+                    delta_x_rot = delta_x*np.cos(bpa) + delta_y*np.sin(bpa)
+                    delta_y_rot = -delta_x*np.sin(bpa) + delta_y*np.cos(bpa)
                     shift = (shift[0] + delta_x_rot, shift[1] + delta_y_rot)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
             elif self.shifts is None and self.shifts_errors is not None:
@@ -149,8 +149,8 @@ class Stack(object):
                 # ``bpa`` goes from North clockwise => bpa = 0 means maximal
                 # shifts at DEC direction (``delta_y`` should be maximal)
                 bpa += np.pi / 2
-                delta_x_rot = abs(delta_x*np.cos(bpa) - delta_y*np.sin(bpa))
-                delta_y_rot = abs(delta_x*np.sin(bpa) + delta_y*np.cos(bpa))
+                delta_x_rot = delta_x*np.cos(bpa) + delta_y*np.sin(bpa)
+                delta_y_rot = -delta_x*np.sin(bpa) + delta_y*np.cos(bpa)
                 shift = (delta_x_rot, delta_y_rot)
                 print("Cleaning {} with applied shift = {}...".format(uvfits_file, shift))
             else:
