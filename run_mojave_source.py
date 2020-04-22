@@ -79,6 +79,7 @@ class Simulation(object):
                  source_epoch_core_offset_file, working_dir,
                  path_to_clean_script, shifts_errors_ell_bmaj,
                  shifts_errors_ell_bmin, shifts_errors_PA_file,
+                 model_core_shifts_errors=True,
                  remove_artificial_uvfits_files=True,
                  create_original_V_stack=False):
         """
@@ -102,6 +103,9 @@ class Simulation(object):
             Minor axis of core shift error ellipse (mas).
         :param shifts_errors_PA_file:
             File with PA of inner jet for each source (possible epoch).
+        :param model_core_shifts_errors: (optional)
+            Boolean. Use parameters of error ellipse specified in previous 3
+            arguments to model error of core offsets? (default: ``True``)
         :param remove_artificial_uvfits_files: (optional)
             Boolean. Remove created artificial UVFITS files? (default: ``True``)
         :param create_original_V_stack: (optional)
@@ -117,6 +121,7 @@ class Simulation(object):
         self.uvfits_files = list()
         self.shifts = list()
         self.shifts_errors = list()
+        self.model_core_shift_errors = model_core_shifts_errors
         df = parse_source_list(source_epoch_core_offset_file, source=source)
         df = df.drop_duplicates()
         for index, row in df.iterrows():
@@ -172,13 +177,17 @@ class Simulation(object):
 
     def create_artificial_stacks(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
         # Create images for artificial stacks
+        if self.model_core_shift_errors:
+            shifts_errors = self.shifts_errors
+        else:
+            shifts_errors = None
         for i in range(self.n_mc):
             data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
             uvfits_files = sorted(glob.glob(os.path.join(data_dir, "*uvf")))
             # Shifts are already inserted in artificial data
             stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam,
                           path_to_clean_script=self.path_to_clean_script,
-                          shifts=None, shifts_errors=self.shifts_errors,
+                          shifts=None, shifts_errors=shifts_errors,
                           working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
