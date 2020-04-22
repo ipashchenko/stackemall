@@ -477,9 +477,11 @@ if __name__ == "__main__":
     # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper)
     sigma_evpa_deg = 3.0
 
+    # Model uncertainty of core offsets?
+    model_core_shifts_errors = True
     # Error of the core shift (mas)
-    shifts_errors_ell_bmaj = 0.1
-    shifts_errors_ell_bmin = 0.1/3
+    shifts_errors_ell_bmaj = 0.05
+    shifts_errors_ell_bmin = 0.05/3
     # File with position angles of the inner jet (possibly per-epoch)
     shifts_errors_PA_file = "PA_inner_jet.txt"
 
@@ -496,6 +498,7 @@ if __name__ == "__main__":
                             source_epoch_core_offset_file, working_dir,
                             path_to_clean_script, shifts_errors_ell_bmaj,
                             shifts_errors_ell_bmin, shifts_errors_PA_file,
+                            model_core_shifts_errors=model_core_shifts_errors,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
                             create_original_V_stack=False)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
