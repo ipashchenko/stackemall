@@ -14,10 +14,12 @@ from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize
                          get_beam_info_by_dec, get_inner_jet_PA)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
+from stack_utils import pol_mask, correct_ppol_bias
 import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, 've/vlbi_errors')
-from from_fits import create_clean_image_from_fits_file
+from from_fits import (create_image_from_fits_file,
+                       create_clean_image_from_fits_file)
 from image import plot as iplot
 
 
@@ -198,13 +200,72 @@ class Simulation(object):
                                     outdir=self.working_dir)
             # TODO: Do we need FITS files of artificial stacks?
             # stack.save_stack_images_in_fits(str(i+1).zfill(3))
+
             # Remove CLEAN FITS-files
-            stack.remove_cc_fits()
+            # stack.remove_cc_fits()
+
+            # Move CC FITS files for later use
+            cc_save_dir = os.path.join(self.working_dir, "CC_{}".format(str(i+1).zfill(3)))
+            if not os.path.exists(cc_save_dir):
+                os.mkdir(cc_save_dir)
+            stack.move_cc_fits(cc_save_dir)
 
             if self.remove_artificial_uvfits_files:
                 # Remove artificial data files
                 for uvfits_file in uvfits_files:
                     os.unlink(uvfits_file)
+
+    def create_individual_epoch_error_images(self, n_realizations_not_masked_min):
+        for i_epoch in range(self.uvfits_files):
+            epoch_errors_dict = dict()
+            ipol_arrays = list()
+            ppol_arrays = list()
+            fpol_arrays = list()
+            pang_arrays = list()
+            for i_real in range(self.n_mc):
+                i_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                                              "cc_{}_{}.fits".format("I", str(i_epoch+1).zfill(3)))
+                q_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                                              "cc_{}_{}.fits".format("Q", str(i_epoch+1).zfill(3)))
+                u_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                                              "cc_{}_{}.fits".format("U", str(i_epoch+1).zfill(3)))
+                i_image = create_image_from_fits_file(i_cc_fits_file)
+                q_image = create_image_from_fits_file(q_cc_fits_file)
+                u_image = create_image_from_fits_file(u_cc_fits_file)
+
+                ppol_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
+                                                         self._npixels_beam, n_sigma=3, return_quantile=True)
+                ipol_array = np.ma.array(i_image.image, mask=ppol_mask_dict["I"])
+                ipol_arrays.append(ipol_array)
+
+                # Mask before correction for bias
+                ppol_array = np.ma.array(np.hypot(q_image.image, u_image.image), mask=ppol_mask_dict["P"])
+                ppol_array = correct_ppol_bias(i_image.image, ppol_array, q_image.image, u_image.image, self._npixels_beam)
+                ppol_arrays.append(ppol_array)
+
+                fpol_arrays.append(ppol_array/i_image.image)
+
+                pang_array = 0.5 * np.arctan2(u_image.image, q_image.image)
+                pang_array = np.ma.array(pang_array, mask=ppol_mask_dict["P"])
+                pang_arrays.append(pang_array)
+
+            # Create error images for given epoch
+            std_ipol = stat_of_masked(ipol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
+            std_ppol = stat_of_masked(ppol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
+            std_fpol = stat_of_masked(fpol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
+            std_pang = stat_of_masked(fpol_arrays, stat="scipy_circstd", n_epochs_not_masked_min=n_realizations_not_masked_min)
+            std_dict = {"IPOL": std_ipol, "PPOL": std_ppol, "FPOL": std_fpol, "PANG": std_pang}
+
+            # Save it to FITS
+            save_dir = os.path.join(self.working_dir, "epoch_errors_{}".format(str(i_epoch+1).zfill(3)))
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            for stokes in ("IPOL", "PPOL", "FPOL", "PANG"):
+                hdu = pf.PrimaryHDU(data=np.ma.filled(std_dict[stokes], np.nan), header=self.hdr)
+                epoch_errors_dict[stokes] = np.ma.filled(std_dict[stokes], np.nan)
+                hdu.writeto(os.path.join(save_dir, "{}_{}_epoch_errors.fits".format(self.source, stokes)))
+                np.savez_compressed(os.path.join(save_dir, "{}_epoch_errors.npz".format(self.source)),
+                                    **epoch_errors_dict)
 
     def create_errors_images(self, create_pictures=True):
 
@@ -527,6 +588,9 @@ if __name__ == "__main__":
     # Number of non-masked epochs in pixel to consider when calculating errors
     # or stds of PANG, FPOL.
     n_epochs_not_masked_min_std = 5
+    # Number of non-masked realizations in pixel to consider when calculating
+    # errors for individual epochs maps.
+    n_realizations_not_masked_min = 5
 
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,
@@ -540,6 +604,7 @@ if __name__ == "__main__":
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_errors_images()
+    simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
 
     npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
     for npz_file in npz_files:
