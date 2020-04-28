@@ -140,6 +140,8 @@ class Simulation(object):
         self.some_image = None
         self.remove_artificial_uvfits_files = remove_artificial_uvfits_files
         self.create_original_V_stack = create_original_V_stack
+        # Original stack
+        self.original_stack = None
 
     def create_artificial_uvdata(self, sigma_scale_amplitude, noise_scale,
                                  sigma_evpa_deg, VLBA_residual_Dterms_file):
@@ -174,6 +176,7 @@ class Simulation(object):
         self.some_image = create_clean_image_from_fits_file(stack.ccfits_files["I"][0])
         # Remove CLEAN FITS-files
         stack.remove_cc_fits()
+        self.original_stack = stack
 
     def create_artificial_stacks(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
         # Create images for artificial stacks
@@ -211,7 +214,7 @@ class Simulation(object):
 
         errors_dict = dict()
         biases_dict = dict()
-        for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
+        for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
             mc_images = list()
             for i in range(self.n_mc):
                 npz = np.load(os.path.join(self.working_dir, "{}_mc_images_{}_stack.npz".format(self.source, str(i + 1).zfill(3))))
@@ -219,7 +222,7 @@ class Simulation(object):
                 # This stacks are not masked => use trivial mask with zeros
                 if stokes in ("I", "PPOL", "PANG", "FPOL"):
                     array = np.ma.array(array, mask=np.zeros(array.shape, dtype=bool))
-                elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
+                elif stokes in ("PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
                     # Masked array with masked values having nans
                     array = np.ma.array(array, mask=np.isnan(array))
                 else:
@@ -397,6 +400,37 @@ class Simulation(object):
         fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
+
+        # STDPPOL
+        error = errors_dict["PPOLSTD"]
+        error = np.ma.array(error, mask=original_images["P_mask"])
+        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+                    blc=blc, trc=trc, beam=beam, close=True,
+                    colorbar_label=r"$\sigma_{\sigma_{P}}, mJy/beam$", show_beam=True,
+                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_errors.png".format(self.source)),
+                    dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+        # Original std_{FPOL} "/" error of std_{FPOL}. Values > 3 imply
+        # significant variability (intrinsic, not due to noise)
+        error = errors_dict["FPOLSTD"]
+        error = np.ma.array(error, mask=original_images["P_mask"])
+        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        fig = iplot(original_images["I"], self.original_stack.stack_images["FPOLSTD"]/error,
+                    x=some_image.x, y=some_image.y,
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                    blc=blc, trc=trc, beam=beam, close=True,
+                    colorbar_label=r"$ \frac{\sigma_{m}}{\sigma_{\sigma_{m}}}$", show_beam=True,
+                    show=True, cmap='nipy_spectral_r', contour_color='black',
+                    plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(self.working_dir, "{}_significance_of_fpol_variability.png".format(self.source)),
+                    dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
 
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
