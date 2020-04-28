@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use("Agg")
 import os
+import shutil
 import sys
 import numpy as np
 from collections import Mapping
@@ -602,4 +603,13 @@ class Stack(object):
         for stokes in self.stokes:
             for cc_fits in self.ccfits_files[stokes]:
                 os.unlink(cc_fits)
+
+    def move_cc_fits(self, destination_directory):
+        """
+        Rename FITS file with CC for all Stokes for later use.
+        """
+        for stokes in self.stokes:
+            for cc_fits in self.ccfits_files[stokes]:
+                prev_dir, name = os.path.split(cc_fits)
+                shutil.move(cc_fits, os.path.join(destination_directory, name))
 
