@@ -476,21 +476,22 @@ class Simulation(object):
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-        # Original std_{FPOL} "/" error of std_{FPOL}. Values > 3 imply
-        # significant variability (intrinsic, not due to noise)
-        error = errors_dict["FPOLSTD"]
-        error = np.ma.array(error, mask=original_images["P_mask"])
-        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], self.original_stack.stack_images["FPOLSTD"]/error,
-                    x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$ \frac{\sigma_{m}}{\sigma_{\sigma_{m}}}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_significance_of_fpol_variability.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        # FIXME: This is wrong measure of variability
+        # # Original std_{FPOL} "/" error of std_{FPOL}. Values > 3 imply
+        # # significant variability (intrinsic, not due to noise)
+        # error = errors_dict["FPOLSTD"]
+        # error = np.ma.array(error, mask=original_images["P_mask"])
+        # # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        # fig = iplot(original_images["I"], self.original_stack.stack_images["FPOLSTD"].image/error,
+        #             x=some_image.x, y=some_image.y,
+        #             min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+        #             blc=blc, trc=trc, beam=beam, close=True,
+        #             colorbar_label=r"$ \frac{\sigma_{m}}{\sigma_{\sigma_{m}}}$", show_beam=True,
+        #             show=True, cmap='nipy_spectral_r', contour_color='black',
+        #             plot_colorbar=True, contour_linewidth=0.25)
+        # fig.savefig(os.path.join(self.working_dir, "{}_significance_of_fpol_variability.png".format(self.source)),
+        #             dpi=300, bbox_inches="tight")
+        # plt.close(fig)
 
 
         bias = biases_dict["I"]
