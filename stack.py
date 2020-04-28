@@ -298,9 +298,11 @@ class Stack(object):
                               freq=self._image_ctor_params["freq"],
                               pixrefval=self._image_ctor_params["pixrefval"],
                               stokes="PPOL2")
-        # This will be list of PPOL arrays masked according to it's own epoch
-        # polarization mask
+        # This will be list of PPOL, PANG and FPOL arrays masked according to
+        # there's own epoch polarization mask
         ppol2_arrays = list()
+        fpol2_arrays = list()
+        pang2_arrays = list()
 
         for i_image, q_image, u_image in zip(i_images, q_images, u_images):
             ppol2_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
@@ -309,6 +311,13 @@ class Stack(object):
             ppol2_array = np.ma.array(np.hypot(q_image.image, u_image.image), mask=ppol2_mask_dict["P"])
             ppol2_array = correct_ppol_bias(i_image.image, ppol2_array, q_image.image, u_image.image, self._npixels_beam)
             ppol2_arrays.append(ppol2_array)
+
+            fpol2_arrays.append(ppol2_array/i_image.image)
+
+            pang2_array = 0.5*np.arctan2(u_image.image, q_image.image)
+            pang2_array = np.ma.array(pang2_array, mask=ppol2_mask_dict["P"])
+            pang2_arrays.append(pang2_array)
+
         ppol2_image.image = stat_of_masked(ppol2_arrays, stat="mean",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["PPOL2"] = ppol2_image
@@ -333,16 +342,6 @@ class Stack(object):
                                freq=self._image_ctor_params["freq"],
                                pixrefval=self._image_ctor_params["pixrefval"],
                                stokes="PANG2")
-        # This will be list of PANG arrays masked according to it's own epoch
-        # polarization mask
-        pang2_arrays = list()
-        for i_image, q_image, u_image in zip(i_images, q_images, u_images):
-            pang2_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
-                                                      self._npixels_beam, n_sigma=3, return_quantile=True)
-            pang2_array = 0.5*np.arctan2(u_image.image, q_image.image)
-            pang2_array = np.ma.array(pang2_array, mask=pang2_mask_dict["P"])
-            pang2_arrays.append(pang2_array)
-
         pang2_image.image = stat_of_masked(pang2_arrays, stat="scipy_circmean",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["PANG2"] = pang2_image
@@ -369,20 +368,6 @@ class Stack(object):
                                freq=self._image_ctor_params["freq"],
                                pixrefval=self._image_ctor_params["pixrefval"],
                                stokes="FPOL2")
-        # This will be list of FPOL arrays masked according to it's own epoch
-        # polarization mask
-        fpol2_arrays = list()
-        for q_image, u_image, i_image in zip(q_images, u_images, i_images):
-            ppol_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
-                                                     self._npixels_beam, n_sigma=3, return_quantile=True)
-            ppol_array = np.hypot(q_image.image, u_image.image)
-            # First mask
-            ppol_array = np.ma.array(ppol_array, mask=ppol_mask_dict["P"])
-            # Then correct bias
-            ppol_array = correct_ppol_bias(i_image.image, ppol_array, q_image.image, u_image.image,
-                                           self._npixels_beam)
-            fpol2_arrays.append(ppol_array/i_image.image)
-
         fpol2_image.image = stat_of_masked(fpol2_arrays, stat="mean",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["FPOL2"] = fpol2_image
@@ -399,6 +384,20 @@ class Stack(object):
         stdfpol_image.image = stat_of_masked(fpol2_arrays, stat="std",
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["FPOLSTD"] = stdfpol_image
+
+
+        print("Creating STD PPOL2 image")
+        stdppol_image = Image()
+        stdppol_image._construct(imsize=self._image_ctor_params["imsize"],
+                                 pixsize=self._image_ctor_params["pixsize"],
+                                 pixref=self._image_ctor_params["pixref"],
+                                 freq=self._image_ctor_params["freq"],
+                                 pixrefval=self._image_ctor_params["pixrefval"],
+                                 stokes="PPOLSTD")
+        stdppol_image.image = stat_of_masked(ppol2_arrays, stat="std",
+                                             n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
+        self.stack_images["PPOLSTD"] = stdppol_image
+
 
         pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
                                                  ("I", "Q", "U")}, self._npixels_beam, n_sigma=3, return_quantile=True)
@@ -421,6 +420,7 @@ class Stack(object):
         pang2_image = self.stack_images["PANG2"]
         std_pang_image = self.stack_images["PANGSTD"]
         std_fpol_image = self.stack_images["FPOLSTD"]
+        std_ppol_image = self.stack_images["PPOLSTD"]
         ppol_quantile = self.stack_images["P_quantile"]
         ipol_mask = self.stack_images["I_mask"]
         ppol_mask = self.stack_images["P_mask"]
@@ -510,6 +510,14 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_fpol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
+        fig = iplot(contours=ipol_image.image, colors=std_ppol_image.image, x=ipol_image.x, y=ipol_image.y,
+                    min_abs_level=3*std, colors_mask=std_ppol_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                    beam=self.beam, close=False, colorbar_label=r"$\sigma_{P}$", show_beam=True, show=True,
+                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                    contour_linewidth=0.25)
+        fig.savefig(os.path.join(outdir, "{}_ppolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
 
         fig = iplot(contours=ipol_image.image, colors=std_fpol_image.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=std_fpol_image.image.mask, color_clim=None, blc=blc, trc=trc,
@@ -546,7 +554,7 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 save_dict.update({stokes: self.stack_images[stokes].image})
             # Others (scalar averaged) have masks
-            elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
                 save_dict.update({stokes: np.ma.filled(self.stack_images[stokes].image, np.nan)})
             elif stokes in ("I_mask", "P_mask"):
                 save_dict.update({stokes: self.stack_images[stokes]})
@@ -575,7 +583,7 @@ class Stack(object):
             elif stokes in ("I", "Q", "U", "V", "RPPOL", "PPOL", "PANG", "FPOL"):
                 hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
             # Others (scalar averaged) have masks
-            elif stokes in ("PPOL2", "FPOL2", "PANG2", "FPOLSTD", "PANGSTD"):
+            elif stokes in ("PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
                 hdu = pf.PrimaryHDU(data=np.ma.filled(self.stack_images[stokes].image, np.nan), header=hdr)
             elif stokes in ("I_mask", "P_mask"):
                 hdu = pf.PrimaryHDU(data=np.array(self.stack_images[stokes], dtype=int),
