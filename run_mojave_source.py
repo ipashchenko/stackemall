@@ -216,18 +216,21 @@ class Simulation(object):
                     os.unlink(uvfits_file)
 
     def create_individual_epoch_error_images(self, n_realizations_not_masked_min):
-        for i_epoch in range(self.uvfits_files):
+        for i_epoch in range(len(self.uvfits_files)):
             epoch_errors_dict = dict()
             ipol_arrays = list()
             ppol_arrays = list()
             fpol_arrays = list()
             pang_arrays = list()
             for i_real in range(self.n_mc):
-                i_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                i_cc_fits_file = os.path.join(self.working_dir,
+                                              "CC_{}".format(str(i_real+1).zfill(3)),
                                               "cc_{}_{}.fits".format("I", str(i_epoch+1).zfill(3)))
-                q_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                q_cc_fits_file = os.path.join(self.working_dir,
+                                              "CC_{}".format(str(i_real+1).zfill(3)),
                                               "cc_{}_{}.fits".format("Q", str(i_epoch+1).zfill(3)))
-                u_cc_fits_file = os.path.join("CC_{}".format(str(i_real+1).zfill(3)),
+                u_cc_fits_file = os.path.join(self.working_dir,
+                                              "CC_{}".format(str(i_real+1).zfill(3)),
                                               "cc_{}_{}.fits".format("U", str(i_epoch+1).zfill(3)))
                 i_image = create_image_from_fits_file(i_cc_fits_file)
                 q_image = create_image_from_fits_file(q_cc_fits_file)
@@ -266,6 +269,10 @@ class Simulation(object):
                 hdu.writeto(os.path.join(save_dir, "{}_{}_epoch_errors.fits".format(self.source, stokes)))
                 np.savez_compressed(os.path.join(save_dir, "{}_epoch_errors.npz".format(self.source)),
                                     **epoch_errors_dict)
+
+        # Remove directories with CC FITS files
+        for i_real in range(self.n_mc):
+            shutil.rmtree(os.path.join(self.working_dir, "CC_{}".format(str(i_real+1).zfill(3))))
 
     def create_errors_images(self, create_pictures=True):
 
@@ -433,7 +440,7 @@ class Simulation(object):
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-        # STDPANG
+        # STDPANG2
         error = errors_dict["PANGSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
@@ -441,35 +448,35 @@ class Simulation(object):
         fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
                     min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{\rm EVPA}}$, $ ^{\circ}$", show_beam=True,
+                    colorbar_label=r"$\sigma_{\sigma_{\rm EVPA2}}$, $ ^{\circ}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_pangstd_errors.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-        # STDFPOL
+        # STDFPOL2
         error = errors_dict["FPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
                     min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
                     blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{m}}$", show_beam=True,
+                    colorbar_label=r"$\sigma_{\sigma_{m2}}$", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
                     dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-        # STDPPOL
+        # STDPPOL2
         error = errors_dict["PPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
+        # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
                     blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{P}}, mJy/beam$", show_beam=True,
+                    colorbar_label=r"$\sigma_{\sigma_{P2}}$, mJy/beam", show_beam=True,
                     show=True, cmap='nipy_spectral_r', contour_color='black',
                     plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_errors.png".format(self.source)),
