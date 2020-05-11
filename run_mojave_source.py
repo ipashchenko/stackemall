@@ -83,7 +83,8 @@ class Simulation(object):
                  shifts_errors_ell_bmin, shifts_errors_PA_file,
                  model_core_shifts_errors=True,
                  remove_artificial_uvfits_files=True,
-                 create_original_V_stack=False):
+                 create_original_V_stack=False,
+                 path_to_uvfits_files="/mnt/jet1/yyk/VLBI/2cmVLBA/data"):
         """
         :param source:
             String B1950 name of the source.
@@ -112,6 +113,9 @@ class Simulation(object):
             Boolean. Remove created artificial UVFITS files? (default: ``True``)
         :param create_original_V_stack: (optional)
             Boolean. Create stacks of Stokes V? (default: ``False``)
+        :param path_to_uvfits_files: (optional)
+            Directory with UVFITS files. Individual files must be
+            path_to_uvfits_files/source/epoch/source.u.epoch.uvf
         """
         self.source = source
         self.n_mc = n_mc
@@ -129,7 +133,7 @@ class Simulation(object):
         for index, row in df.iterrows():
             epoch = convert_mojave_epoch(row['epoch'])
             self.shifts.append((row['shift_ra'], row['shift_dec']))
-            uvfits_file = "/mnt/jet1/yyk/VLBI/2cmVLBA/data/{}/{}/{}.u.{}.uvf".format(source, epoch, source, epoch)
+            uvfits_file = "{}/{}/{}/{}.u.{}.uvf".format(path_to_uvfits_files, source, epoch, source, epoch)
             self.uvfits_files.append(uvfits_file)
             # TODO: If per-epoch core shift errors are needed then change
             #  implementation of this function
@@ -146,9 +150,12 @@ class Simulation(object):
         self.original_stack = None
 
     def create_artificial_uvdata(self, sigma_scale_amplitude, noise_scale,
-                                 sigma_evpa_deg, VLBA_residual_Dterms_file):
-        with open(VLBA_residual_Dterms_file, "r") as fo:
-            d_term = json.load(fo)
+                                 sigma_evpa_deg, VLBA_residual_Dterms_file=None):
+        if VLBA_residual_Dterms_file is not None:
+            with open(VLBA_residual_Dterms_file, "r") as fo:
+                d_term = json.load(fo)
+        else:
+            d_term = None
 
         for uvfits_file, shift in zip(self.uvfits_files, self.shifts):
             print("Creating {} artificial data sets from {} with applied shift = {}".format(n_mc, uvfits_file, shift))
@@ -570,14 +577,16 @@ if __name__ == "__main__":
     # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "final_clean"
 
-    # Residual uncertainty in the scale of the gain amplitudes
+    # Residual uncertainty in the scale of the gain amplitudes. Set to ``None``
+    # if not necessary to model this.
     sigma_scale_amplitude = 0.035
 
     # Scale to thermal noise estimated from data (1.0 => keep those found in
     # data)
     noise_scale = 1.0
 
-    # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper)
+    # Absolute EVPA calibration uncertainty (see MOJAVE VIII paper). Set to
+    # ``None`` to skip modelling of this error.
     sigma_evpa_deg = 3.0
 
     # Model uncertainty of core offsets?
@@ -588,7 +597,8 @@ if __name__ == "__main__":
     # File with position angles of the inner jet (possibly per-epoch)
     shifts_errors_PA_file = "PA_inner_jet.txt"
 
-    # File with D-terms residuals for VLBA & Eff.
+    # File with D-terms residuals for VLBA & Eff. Set to ``None`` if no residual
+    # D-term modelling is needed.
     VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
 
     # Number of non-masked epochs in pixel to consider when calculating means.
@@ -600,13 +610,16 @@ if __name__ == "__main__":
     # errors for individual epochs maps.
     n_realizations_not_masked_min = 5
 
+    path_to_uvfits_files = "/mnt/jet1/yyk/VLBI/2cmVLBA/data"
+
     simulation = Simulation(source, n_mc, common_mapsize_clean, common_beam,
                             source_epoch_core_offset_file, working_dir,
                             path_to_clean_script, shifts_errors_ell_bmaj,
                             shifts_errors_ell_bmin, shifts_errors_PA_file,
                             model_core_shifts_errors=model_core_shifts_errors,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
-                            create_original_V_stack=False)
+                            create_original_V_stack=False,
+                            path_to_uvfits_files=path_to_uvfits_files)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file)
