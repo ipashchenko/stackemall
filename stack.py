@@ -594,7 +594,7 @@ class Stack(object):
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
-            hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)))
+            hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)), output_verify='ignore')
 
     def remove_cc_fits(self):
         """

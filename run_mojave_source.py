@@ -273,7 +273,7 @@ class Simulation(object):
             for stokes in ("IPOL", "PPOL", "FPOL", "PANG"):
                 hdu = pf.PrimaryHDU(data=np.ma.filled(std_dict[stokes], np.nan), header=self.hdr)
                 epoch_errors_dict[stokes] = np.ma.filled(std_dict[stokes], np.nan)
-                hdu.writeto(os.path.join(save_dir, "{}_{}_epoch_errors.fits".format(self.source, stokes)))
+                hdu.writeto(os.path.join(save_dir, "{}_{}_epoch_errors.fits".format(self.source, stokes)), output_verify='ignore')
                 np.savez_compressed(os.path.join(save_dir, "{}_epoch_errors.npz".format(self.source)),
                                     **epoch_errors_dict)
 
@@ -314,7 +314,7 @@ class Simulation(object):
 
             hdu = pf.PrimaryHDU(data=np.ma.filled(std, np.nan), header=self.hdr)
             errors_dict[stokes] = np.ma.filled(std, np.nan)
-            hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)))
+            hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)), output_verify='ignore')
 
             # Find biases
             if stokes in ("I", "PPOL", "FPOL"):
@@ -323,7 +323,7 @@ class Simulation(object):
                 bias = mean - original_images[stokes]
                 biases_dict[stokes] = np.ma.filled(bias, np.nan)
                 hdu = pf.PrimaryHDU(data=np.ma.filled(bias, np.nan), header=self.hdr)
-                hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)))
+                hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)), output_verify='ignore')
 
         np.savez_compressed(os.path.join(self.working_dir, "{}_stack_errors.npz".format(self.source)),
                             **errors_dict)
