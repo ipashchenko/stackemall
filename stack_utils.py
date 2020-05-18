@@ -276,6 +276,7 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
     mstd = mad_std(np.ma.array(data, mask=np.isnan(data)))
     min_fraction_range = scoreatpercentile(data, min_fraction)
     hp_indexes = np.argsort(data)[::-1][np.argsort(np.diff(np.sort(data)[::-1]))]
+    diff = None
     for ind in hp_indexes:
         hp = data[ind]
         try:
@@ -286,6 +287,9 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
         frac = percentileofscore(data, hp_low)
         if diff < mstd/2 and frac < 95:
             break
+    # Somehow diff haven't been computed
+    if diff is None:
+        return min_fraction_range, 95
     if diff > mstd/2:
         return min_fraction_range, 95
     else:
