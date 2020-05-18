@@ -5,7 +5,6 @@ import sys
 import glob
 import shutil
 import numpy as np
-# git clone https://github.com/ipashchenko/ve.git
 sys.path.insert(0, 've/vlbi_errors')
 from spydiff import clean_difmap
 from uv_data import UVData
