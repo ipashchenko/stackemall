@@ -31,13 +31,16 @@ def get_sources_with_failed_jobs(logfile):
     return failed_sources
 
 
-def remove_dirs_with_failed_jobs(logfile, working_dir="/mnt/storage/ilya/MOJAVE_pol_stacking"):
+def remove_dirs_with_failed_jobs(logfile, working_dir="/mnt/storage/ilya/MOJAVE_pol_stacking", test=True):
     failed_sources = get_sources_with_failed_jobs(logfile)
     for source in failed_sources:
         dir_to_rm = os.path.join(working_dir, source)
         print("Removig directory ", dir_to_rm)
         try:
-            shutil.rmtree(dir_to_rm)
+            if test:
+                print("TEST: Removing ", dir_to_rm)
+            else:
+                shutil.rmtree(dir_to_rm)
         except FileNotFoundError:
             print("No directory {} found! Skipping.".format(dir_to_rm))
 
