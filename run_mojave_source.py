@@ -599,7 +599,7 @@ if __name__ == "__main__":
 
     # File with D-terms residuals for VLBA & Eff. Set to ``None`` if no residual
     # D-term modelling is needed.
-    VLBA_residual_Dterms_file = "VLBA_EB_residuals_D.json"
+    VLBA_residual_Dterms_file = "VLBA_EB_Y_residuals_D.json"
 
     # Number of non-masked epochs in pixel to consider when calculating means.
     n_epochs_not_masked_min = 1
