@@ -150,7 +150,8 @@ class Simulation(object):
         self.original_stack = None
 
     def create_artificial_uvdata(self, sigma_scale_amplitude, noise_scale,
-                                 sigma_evpa_deg, VLBA_residual_Dterms_file=None):
+                                 sigma_evpa_deg, VLBA_residual_Dterms_file=None,
+                                 noise_from_V=True):
         if VLBA_residual_Dterms_file is not None:
             with open(VLBA_residual_Dterms_file, "r") as fo:
                 d_term = json.load(fo)
@@ -160,7 +161,8 @@ class Simulation(object):
         for uvfits_file, shift in zip(self.uvfits_files, self.shifts):
             print("Creating {} artificial data sets from {} with applied shift = {}".format(n_mc, uvfits_file, shift))
             creator = ArtificialDataCreator(uvfits_file, self.path_to_clean_script, self.common_mapsize_clean,
-                                            self.common_beam, shift=shift, working_dir=self.working_dir)
+                                            self.common_beam, shift=shift, working_dir=self.working_dir,
+                                            noise_from_V=noise_from_V)
             creator.mc_create_uvfits(n_mc=self.n_mc, d_term=d_term, sigma_scale_amplitude=sigma_scale_amplitude,
                                      noise_scale=noise_scale, sigma_evpa=sigma_evpa_deg,
                                      constant_dterm_amplitude=True,
@@ -577,6 +579,9 @@ if __name__ == "__main__":
     # Path to Dan Homan CLEAN-ing script
     path_to_clean_script = "final_clean"
 
+    # Estimate thermal noise from Stokes V or use successive difference approach?
+    noise_from_V = True
+
     # Residual uncertainty in the scale of the gain amplitudes. Set to ``None``
     # if not necessary to model this.
     sigma_scale_amplitude = 0.035
@@ -622,7 +627,8 @@ if __name__ == "__main__":
                             path_to_uvfits_files=path_to_uvfits_files)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
-                                        sigma_evpa_deg, VLBA_residual_Dterms_file)
+                                        sigma_evpa_deg, VLBA_residual_Dterms_file,
+                                        noise_from_V)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_errors_images()
     simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)

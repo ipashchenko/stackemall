@@ -47,7 +47,7 @@ def downscale_uvdata_by_freq(uvdata):
 
 class ArtificialDataCreator(object):
     def __init__(self, uvfits_file, path_to_clean_script, mapsize_clean, beam,
-                 shift=None, models=None, working_dir=None):
+                 shift=None, models=None, working_dir=None, noise_from_V=True):
         """
         :param uvfits_file:
             UVFITS file with self-calibrated and D-terms corrected data.
@@ -65,6 +65,9 @@ class ArtificialDataCreator(object):
             (default: ``None``)
         :param working_dir: (optional)
             Directory for storing files. If ``None`` than use CWD. (default: ``None``)
+        :param noise_from_V: (optional)
+            Use noise estimated from Stokes V? If not than use successive
+            differences approach. (default: ``True``)
         """
         self.uvfits_file = uvfits_file
         self.path_to_clean_script = path_to_clean_script
@@ -72,6 +75,7 @@ class ArtificialDataCreator(object):
         self.shift = shift
         self.mapsize_clean = mapsize_clean
         self.beam = beam
+        self.noise_from_V = noise_from_V
 
         self.stokes = ("I", "Q", "U")
 
@@ -140,7 +144,13 @@ class ArtificialDataCreator(object):
         # Get uv-data and CLEAN model
         # ``ignore`` option for 1226 1996_03_22
         uvdata = UVData(self.uvfits_file, verify_option="ignore")
-        noise = uvdata.noise()
+        if self.noise_from_V:
+            # Dictionary with keys - baselines and values - array of noise std
+            # for IFs.
+            noise = uvdata.noise()
+        else:
+            noise = uvdata.noise(use_V=False)
+
         for baseline in noise:
             noise[baseline] *= noise_scale
         uvdata.zero_data()
