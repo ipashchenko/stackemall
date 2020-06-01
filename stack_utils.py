@@ -51,7 +51,7 @@ def get_beam_info_by_dec(source):
     dec = df.query("source == @source")["dec"].values[0]
     bmaj = 1.28295977 - 8.95027412e-03*dec - 7.91363153e-05*dec**2 + 1.24419018e-06*dec**3
     bmin = 0.52192393 + 1.00730852e-03*dec + 8.88395448e-06*dec**2 - 5.57102780e-08*dec**3
-    return 0.5*(bmaj+bmin)
+    return np.round(0.5*(bmaj+bmin), 2)
 
 
 def get_beam_info(source):
