@@ -84,7 +84,8 @@ class Simulation(object):
                  model_core_shifts_errors=True,
                  remove_artificial_uvfits_files=True,
                  create_original_V_stack=False,
-                 path_to_uvfits_files="/mnt/jet1/yyk/VLBI/2cmVLBA/data"):
+                 path_to_uvfits_files="/mnt/jet1/yyk/VLBI/2cmVLBA/data",
+                 omit_residuals=False, do_smooth=True):
         """
         :param source:
             String B1950 name of the source.
@@ -124,6 +125,8 @@ class Simulation(object):
         self._npixels_beam = np.pi*common_beam[0]*common_beam[1]/common_mapsize_clean[1]**2
         self.working_dir = working_dir
         self.path_to_clean_script = path_to_clean_script
+        self.omit_residuals = omit_residuals
+        self.do_smooth = do_smooth
         self.uvfits_files = list()
         self.shifts = list()
         self.shifts_errors = list()
@@ -176,7 +179,8 @@ class Simulation(object):
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
-                      use_V=self.create_original_V_stack)
+                      use_V=self.create_original_V_stack, omit_residuals=self.omit_residuals,
+                      do_smooth=self.do_smooth)
         stack.save_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.plot_stack_images("{}_original".format(self.source),
@@ -559,6 +563,9 @@ if __name__ == "__main__":
     # Number of realizations
     n_mc = 30
 
+    omit_residuals = False
+    do_smooth = True
+
     # Remove created artificial UVFITS files to save disk space?
     remove_artificial_uvfits_files = True
 
@@ -571,16 +578,17 @@ if __name__ == "__main__":
     source_epoch_core_offset_file = "core_offsets.txt"
 
     # Directory to save intermediate and final results
-    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/run_1_full_rms"
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/noresid"
     working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
 
     # Path to Dan Homan CLEAN-ing script
-    path_to_clean_script = "final_clean"
+    path_to_clean_script = "final_clean_rms"
 
     # Estimate thermal noise from Stokes V or use successive difference approach?
-    noise_from_V = True
+    noise_from_V = False
 
     # Residual uncertainty in the scale of the gain amplitudes. Set to ``None``
     # if not necessary to model this.
@@ -595,7 +603,7 @@ if __name__ == "__main__":
     sigma_evpa_deg = 3.0
 
     # Model uncertainty of core offsets?
-    model_core_shifts_errors = True
+    model_core_shifts_errors = False
     # Error of the core shift (mas)
     shifts_errors_ell_bmaj = 0.05
     shifts_errors_ell_bmin = 0.05/3
@@ -624,7 +632,8 @@ if __name__ == "__main__":
                             model_core_shifts_errors=model_core_shifts_errors,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
                             create_original_V_stack=False,
-                            path_to_uvfits_files=path_to_uvfits_files)
+                            path_to_uvfits_files=path_to_uvfits_files,
+                            omit_residuals=omit_residuals, do_smooth=do_smooth)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file,
