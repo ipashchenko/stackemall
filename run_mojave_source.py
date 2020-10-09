@@ -185,6 +185,8 @@ class Simulation(object):
                       do_smooth=self.do_smooth)
         stack.save_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
+        stack.save_cconly_stack_images("{}_original".format(self.source),
+                                       outdir=self.working_dir)
         stack.plot_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.save_stack_images_in_fits("{}_original_stack".format(self.source),
