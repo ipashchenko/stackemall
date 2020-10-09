@@ -164,7 +164,10 @@ class Simulation(object):
         for i, uvfits_file, shift in zip(range(len(self.uvfits_files)), self.uvfits_files, self.shifts):
             print("Creating {} artificial data sets from {} with applied shift = {}".format(n_mc, uvfits_file, shift))
             # Using already CLEANed models (when stack was created) for simulations
+            # Shifts are accounted for here! (CC-models have core at (0,0)!)
             models = self.original_stack.cc_models[i]
+            # No need to shift!
+            shift = None
             creator = ArtificialDataCreator(uvfits_file, self.path_to_clean_script, self.common_mapsize_clean,
                                             self.common_beam, shift=shift, models=models, working_dir=self.working_dir,
                                             noise_from_V=noise_from_V)
@@ -208,7 +211,7 @@ class Simulation(object):
         for i in range(self.n_mc):
             data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
             uvfits_files = sorted(glob.glob(os.path.join(data_dir, "*uvf")))
-            # Shifts are already inserted in artificial data
+            # Shifts are already accounted for (inserted while creating original stack and CC-models!)
             stack = Stack(uvfits_files, self.common_mapsize_clean, self.common_beam,
                           path_to_clean_script=self.path_to_clean_script,
                           shifts=None, shifts_errors=shifts_errors,
