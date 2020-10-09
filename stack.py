@@ -696,7 +696,6 @@ class Stack(object):
                              min_area_pix=4*self._npixels_beam, delta=10)
 
         print("Plotting stack images with blc={}, trc={}".format(blc, trc))
-
         # I (1 contour) + P (color) + EVPA (vector)
         fig = iplot(ppol_image.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=ppol_quantile, blc=blc, trc=trc,
@@ -713,7 +712,6 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
         if "V" in self.stokes:
             vpol_image = self.stack_images["V"]
             max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_image.image, mask=self.i_mask)))
@@ -727,7 +725,6 @@ class Stack(object):
             fig.savefig(os.path.join(outdir, "{}_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
             plt.close()
 
-
         # Add IPOL single contour and colors of FPOL with colorbar
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
@@ -738,7 +735,6 @@ class Stack(object):
                     contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
-
 
         fig = iplot(ppol2_image.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=ppol_quantile, blc=blc, trc=trc,
@@ -754,7 +750,6 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_ppol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
         fig = iplot(contours=ipol_image.image, colors=nepochs_image.image, x=ipol_image.x, y=ipol_image.y,
@@ -764,7 +759,6 @@ class Stack(object):
                     contour_linewidth=0.25, n_discrete_colors=np.max(nepochs_image.image.flatten()))
         fig.savefig(os.path.join(outdir, "{}_nepochs.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
-
 
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
@@ -784,7 +778,6 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_ppolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
         fig = iplot(contours=ipol_image.image, colors=std_fpol_image.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=std_fpol_image.image.mask, color_clim=None, blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label=r"$\sigma_{m}$", show_beam=True, show=True,
@@ -792,7 +785,6 @@ class Stack(object):
                     contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_fpolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
-
 
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
         # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
@@ -804,13 +796,7 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
-
-
-
-
         print("Plotting CC-only stack images with blc={}, trc={}".format(blc, trc))
-
         # I (1 contour) + P (color) + EVPA (vector)
         fig = iplot(ppol_cconly_image.image, x=ipol_cconly_image.x, y=ipol_cconly_image.y,
                     min_abs_level=ppol_quantile, blc=blc, trc=trc,
@@ -854,18 +840,13 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_cconly_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
-
-
-
-
-
-
+        blc_all = (1, 1)
+        trc_all = (self.mapsize_clean[0], self.mapsize_clean[0])
 
         print("Plotting residuals stack images with blc={}, trc={}".format(blc, trc))
 
         fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
                     show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
@@ -873,7 +854,7 @@ class Stack(object):
         plt.close()
 
         fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
                     show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
@@ -881,13 +862,12 @@ class Stack(object):
         plt.close()
 
         fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
                     show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
-
 
     def save_stack_images(self, save_fn, outdir=None):
         save_dict = dict()

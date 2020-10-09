@@ -569,7 +569,7 @@ if __name__ == "__main__":
     source = sys.argv[1]
 
     # Number of realizations
-    n_mc = 30
+    n_mc = 5
 
     omit_residuals = False
     do_smooth = True
@@ -643,13 +643,13 @@ if __name__ == "__main__":
                             path_to_uvfits_files=path_to_uvfits_files,
                             omit_residuals=omit_residuals, do_smooth=do_smooth)
     simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
-    # simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
-    #                                     sigma_evpa_deg, VLBA_residual_Dterms_file,
-    #                                     noise_from_V)
-    # simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
-    # simulation.create_errors_images()
-    # simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
-    #
-    # npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
-    # for npz_file in npz_files:
-    #     os.unlink(npz_file)
+    simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
+                                        sigma_evpa_deg, VLBA_residual_Dterms_file,
+                                        noise_from_V)
+    simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
+    simulation.create_errors_images()
+    simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
+
+    npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
+    for npz_file in npz_files:
+        os.unlink(npz_file)
