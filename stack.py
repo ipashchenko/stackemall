@@ -369,6 +369,19 @@ class Stack(object):
         fpol_image.image = fpol_array
         self.cconly_stack_images["FPOL"] = fpol_image
 
+        print("Creating PANG cc-only stack")
+        pang_image = Image()
+        pang_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="FPOL")
+        pang_array = 0.5*np.arctan2(self.cconly_stack_images["U"].image,
+                                    self.cconly_stack_images["Q"].image)
+        pang_image.image = pang_array
+        self.cconly_stack_images["PANG"] = pang_image
+
     def create_stack_residual_images(self):
         print("Creating I residual stack")
         ipol_image = Image()
@@ -793,7 +806,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_ipol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
@@ -801,7 +814,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_qpol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
@@ -809,7 +822,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
                     beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
@@ -901,7 +914,7 @@ class Stack(object):
             # These are not masked, but masks for I & PPOL are saved and
             # masks with other parameters can be recovered using I, Q, U, RPPOL
             # (last is raw PPOL w/o bias correction)
-            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL"):
+            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
                 hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
