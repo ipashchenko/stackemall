@@ -161,10 +161,12 @@ class Simulation(object):
         else:
             d_term = None
 
-        for uvfits_file, shift in zip(self.uvfits_files, self.shifts):
+        for i, uvfits_file, shift in zip(range(len(self.uvfits_files)), self.uvfits_files, self.shifts):
             print("Creating {} artificial data sets from {} with applied shift = {}".format(n_mc, uvfits_file, shift))
+            # Using already CLEANed models (when stack was created) for simulations
+            models = self.original_stack.cc_models[i]
             creator = ArtificialDataCreator(uvfits_file, self.path_to_clean_script, self.common_mapsize_clean,
-                                            self.common_beam, shift=shift, working_dir=self.working_dir,
+                                            self.common_beam, shift=shift, models=models, working_dir=self.working_dir,
                                             noise_from_V=noise_from_V)
             creator.mc_create_uvfits(n_mc=self.n_mc, d_term=d_term, sigma_scale_amplitude=sigma_scale_amplitude,
                                      noise_scale=noise_scale, sigma_evpa=sigma_evpa_deg,

@@ -11,7 +11,8 @@ from stack_utils import (pol_mask, stat_of_masked, find_image_std, find_bbox,
 sys.path.insert(0, 've/vlbi_errors')
 from spydiff import clean_difmap
 from from_fits import (create_image_from_fits_file,
-                       create_clean_image_from_fits_file)
+                       create_clean_image_from_fits_file,
+                       create_model_from_fits_file)
 from image import Image
 from image import plot as iplot
 import matplotlib.pyplot as plt
@@ -155,7 +156,11 @@ class Stack(object):
         for stokes in self.stokes:
             for i in range(len(uvfits_files)):
                 self.difmap_files[stokes].append(os.path.join(self.working_dir,
-                                                              "cc_{}_{}.dfm".format(stokes, str(i+1).zfill(3))))
+                                                              "cc_{}_{}.mdl".format(stokes, str(i+1).zfill(3))))
+
+        # List of dictionaries with keys - Stokes parameters and values -
+        # instances of ``Model`` class with ``stokes`` attribute and ``ft(uv)`` method
+        self.cc_models = len(uvfits_files)*[None]
 
         # Paths to FITS files with residuals images (the same parameters) for each Stokes.
         self.residuals_fits_files = dict()
@@ -202,6 +207,7 @@ class Stack(object):
 
         self._image_ctor_params = dict()
         self._clean_original_data_with_the_same_params()
+        self.fill_cc_models()
         if create_stacks:
             self.create_stack_images()
             self.create_stack_residual_images()
@@ -267,11 +273,18 @@ class Stack(object):
         self._image_ctor_params["freq"] = image.freq
         self._image_ctor_params["pixrefval"] = image.pixrefval
 
+    def fill_cc_models(self):
+        for i in range(len(self.uvfits_files)):
+            self.cc_models[i] = dict()
+            for stk in self.stokes:
+                model = create_model_from_fits_file(self.ccfits_files[stk][i])
+                self.cc_models[i][stk] = model
+
     def create_stack_CConly_images(self):
         print("Convolving CC with beam and creating residual-less images")
         for stk in self.stokes:
             for i in range(len(self.uvfits_files)):
-                convert_difmap_model_file_to_CCFITS(self.difmap_files[i], stk, self.mapsize, self.beam,
+                convert_difmap_model_file_to_CCFITS(self.difmap_files[stk][i], stk, self.mapsize_clean, self.beam,
                                                     self.uvfits_files[i], self.cconly_fits_files[stk][i])
 
         print("Creating I cc-only stack")
