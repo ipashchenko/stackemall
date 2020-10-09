@@ -350,7 +350,7 @@ class Simulation(object):
         if self.remove_artificial_uvfits_files:
             for i in range(self.n_mc):
                 data_dir = os.path.join(self.working_dir, "artificial_{}".format(str(i + 1).zfill(3)))
-                os.rmdir(data_dir)
+                shutil.rmtree(data_dir)
 
         if not create_pictures:
             return
