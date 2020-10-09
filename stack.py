@@ -906,7 +906,7 @@ class Stack(object):
             # masks with other parameters can be recovered using I, Q, U, RPPOL
             # (last is raw PPOL w/o bias correction)
             if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
-                save_dict.update({stokes: self.stack_images[stokes].image})
+                save_dict.update({stokes: self.cconly_stack_images[stokes].image})
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
@@ -954,7 +954,7 @@ class Stack(object):
             # masks with other parameters can be recovered using I, Q, U, RPPOL
             # (last is raw PPOL w/o bias correction)
             if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
-                hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
+                hdu = pf.PrimaryHDU(data=self.cconly_stack_images[stokes].image, header=hdr)
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
