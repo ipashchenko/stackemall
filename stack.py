@@ -667,12 +667,16 @@ class Stack(object):
             outdir = self.working_dir
 
         ipol_image = self.stack_images["I"]
-        ppol_image = self.stack_images["PPOL"]
         ipol_dimage = self.stack_residuals_images["I"]
+        ipol_cconly_image = self.cconly_stack_images["I"]
+        ppol_image = self.stack_images["PPOL"]
+        ppol_cconly_image = self.cconly_stack_images["PPOL"]
         qpol_dimage = self.stack_residuals_images["Q"]
         upol_dimage = self.stack_residuals_images["U"]
         fpol_image = self.stack_images["FPOL"]
+        fpol_cconly_image = self.cconly_stack_images["FPOL"]
         pang_image = self.stack_images["PANG"]
+        pang_cconly_image = self.cconly_stack_images["PANG"]
         ppol2_image = self.stack_images["PPOL2"]
         nepochs_image = self.stack_images["NEPOCHS"]
         fpol2_image = self.stack_images["FPOL2"]
@@ -799,6 +803,63 @@ class Stack(object):
                     contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
+
+
+
+
+
+
+        print("Plotting CC-only stack images with blc={}, trc={}".format(blc, trc))
+
+        # I (1 contour) + P (color) + EVPA (vector)
+        fig = iplot(ppol_cconly_image.image, x=ipol_cconly_image.x, y=ipol_cconly_image.y,
+                    min_abs_level=ppol_quantile, blc=blc, trc=trc,
+                    close=False, contour_color='black',
+                    plot_colorbar=False)
+        # Add IPOL single contour and vectors of PANG with colors of PPOL
+        fig = iplot(contours=ipol_cconly_image.image, vectors=pang_cconly_image.image,
+                    x=ipol_cconly_image.x, y=ipol_cconly_image.y, vinc=4,  contour_linewidth=0.25,
+                    vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
+                    beam=self.beam, close=False, show_beam=True, show=True,
+                    contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
+        axes = fig.get_axes()[0]
+        axes.invert_xaxis()
+        fig.savefig(os.path.join(outdir, "{}_cconly_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
+
+        if "V" in self.stokes:
+            vpol_cconly_image = self.cconly_stack_images["V"]
+            max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_cconly_image.image, mask=self.i_mask)))
+            max_snr = max_abs_v/v_std
+            fig = iplot(ipol_cconly_image.image, 1000*vpol_cconly_image.image/v_std,
+                        x=ipol_cconly_image.x, y=ipol_cconly_image.y,
+                        min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
+                        show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
+                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_cconly_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
+
+
+        # Add IPOL single contour and colors of FPOL with colorbar
+        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+        fig = iplot(ipol_cconly_image.image, fpol_cconly_image.image,
+                    x=ipol_cconly_image.x, y=ipol_cconly_image.y,
+                    min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
+                    beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
+                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                    contour_linewidth=0.25)
+        fig.savefig(os.path.join(outdir, "{}_cconly_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
+
+
+
+
+
+
 
 
         print("Plotting residuals stack images with blc={}, trc={}".format(blc, trc))
