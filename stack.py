@@ -813,7 +813,6 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_cconly_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
-
         if "V" in self.stokes:
             vpol_cconly_image = self.cconly_stack_images["V"]
             max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_cconly_image.image, mask=self.i_mask)))
@@ -826,7 +825,6 @@ class Stack(object):
                         contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
             fig.savefig(os.path.join(outdir, "{}_cconly_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
             plt.close()
-
 
         # Add IPOL single contour and colors of FPOL with colorbar
         # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
@@ -848,7 +846,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_ipol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
@@ -856,7 +854,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_qpol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
@@ -864,7 +862,7 @@ class Stack(object):
         fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
                     min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
                     beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-30*std, 30*std],
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
                     contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
         fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
