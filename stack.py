@@ -124,7 +124,7 @@ class Stack(object):
         self.shifts_errors = shifts_errors
         self.mapsize_clean = mapsize_clean
         self.beam = beam
-        self._npixels_beam = np.pi*beam[0]*beam[1]/mapsize_clean[1]**2
+        self._npixels_beam = np.pi*beam[0]*beam[1]/(4*np.log(2)*mapsize_clean[1]**2)
 
         self.path_to_clean_script = path_to_clean_script
         self.n_epochs_not_masked_min = n_epochs_not_masked_min
