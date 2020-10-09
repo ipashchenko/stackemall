@@ -46,7 +46,7 @@ def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, rest
     difmapout.write("observe " + uvfits_template + "\n")
     difmapout.write("select " + stokes + "\n")
     difmapout.write("rmodel " + difmap_model_file + "\n")
-    difmapout.write("mapsize " + str(mapsize[0]) + "," + str(mapsize[1]) + "\n")
+    difmapout.write("mapsize " + str(mapsize[0] * 2) + "," + str(mapsize[1]) + "\n")
     print("Restoring difmap model with BEAM : bmin = " + str(restore_beam[1]) + ", bmaj = " + str(restore_beam[0]) + ", " + str(restore_beam[2]) + " deg")
     # default dimfap: false,true (parameters: omit_residuals, do_smooth)
     difmapout.write("restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) +
