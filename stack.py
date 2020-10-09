@@ -905,7 +905,7 @@ class Stack(object):
             # These are not masked, but masks for I & PPOL are saved and
             # masks with other parameters can be recovered using I, Q, U, RPPOL
             # (last is raw PPOL w/o bias correction)
-            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL"):
+            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
                 save_dict.update({stokes: self.stack_images[stokes].image})
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
