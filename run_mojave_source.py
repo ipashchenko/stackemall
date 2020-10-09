@@ -187,6 +187,8 @@ class Simulation(object):
                                 outdir=self.working_dir)
         stack.save_stack_images_in_fits("{}_original_stack".format(self.source),
                                         outdir=self.working_dir)
+        stack.save_cconly_stack_images_in_fits("{}_original_cconly_stack".format(self.source),
+                                               outdir=self.working_dir)
         self.hdr = pf.open(stack.ccfits_files["I"][0])[0].header
         self.some_image = create_clean_image_from_fits_file(stack.ccfits_files["I"][0])
         # Remove CLEAN FITS-files
@@ -211,6 +213,8 @@ class Simulation(object):
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
                                     outdir=self.working_dir)
+            # stack.save_cconly_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
+            #                                outdir=self.working_dir)
             # TODO: Do we need FITS files of artificial stacks?
             # stack.save_stack_images_in_fits(str(i+1).zfill(3))
 
@@ -292,6 +296,7 @@ class Simulation(object):
         some_image = self.some_image
         beam = self.common_beam
         original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
+        original_cconly_images = np.load(os.path.join(self.working_dir, "{}_original_cconly_stack.npz".format(self.source)))
 
         errors_dict = dict()
         biases_dict = dict()
@@ -326,7 +331,8 @@ class Simulation(object):
             if stokes in ("I", "PPOL", "FPOL"):
                 mean = stat_of_masked(mc_images, stat="mean",
                                       n_epochs_not_masked_min=n_epochs_not_masked_min_std)
-                bias = mean - original_images[stokes]
+                # FIXME: Here must be beam-convolved CC-images (that are used to build artificial data)!
+                bias = mean - original_cconly_images[stokes]
                 biases_dict[stokes] = np.ma.filled(bias, np.nan)
                 hdu = pf.PrimaryHDU(data=np.ma.filled(bias, np.nan), header=self.hdr)
                 hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)), output_verify='ignore')

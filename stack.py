@@ -1,5 +1,6 @@
 import matplotlib
 matplotlib.use("Agg")
+import datetime
 import os
 import shutil
 import sys
@@ -16,6 +17,48 @@ from image import plot as iplot
 import matplotlib.pyplot as plt
 from astropy.io import fits as pf
 from astropy.stats import mad_std
+
+
+def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, restore_beam, uvfits_template, out_ccfits,
+                                        show_difmap_output=True):
+    """
+    Using difmap-formated model file (e.g. flux, r, theta) obtain convolution of your model with the specified beam.
+
+    :param difmap_model_file:
+        Difmap-formated model file. Use ``JetImage.save_image_to_difmap_format`` to obtain it.
+    :param stokes:
+        Stokes parameter.
+    :param mapsize:
+        Iterable of image size and pixel size (mas).
+    :param restore_beam:
+        Beam to restore: bmaj(mas), bmin(mas), bpa(deg).
+    :param uvfits_template:
+        Template uvfits observation to use. Difmap can't read model without having observation at hand.
+    :param out_ccfits:
+        File name to save resulting convolved map.
+    :param show_difmap_output: (optional)
+        Boolean. Show Difmap output? (default: ``True``)
+    """
+    stamp = datetime.datetime.now()
+    command_file = "difmap_commands_{}".format(stamp.isoformat())
+    difmapout = open(command_file, "w")
+    difmapout.write("observe " + uvfits_template + "\n")
+    difmapout.write("select " + stokes + "\n")
+    difmapout.write("rmodel " + difmap_model_file + "\n")
+    difmapout.write("mapsize " + str(mapsize[0]) + "," + str(mapsize[1]) + "\n")
+    print("Restoring difmap model with BEAM : bmin = " + str(restore_beam[1]) + ", bmaj = " + str(restore_beam[0]) + ", " + str(restore_beam[2]) + " deg")
+    # default dimfap: false,true (parameters: omit_residuals, do_smooth)
+    difmapout.write("restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) +
+                    "," + "true,false" + "\n")
+    difmapout.write("wmap " + out_ccfits + "\n")
+    difmapout.write("exit\n")
+    difmapout.close()
+
+    shell_command = "difmap < " + command_file + " 2>&1"
+    if not show_difmap_output:
+        shell_command += " >/dev/null"
+    os.system(shell_command)
+    os.unlink(command_file)
 
 
 class Stack(object):
@@ -105,16 +148,34 @@ class Stack(object):
                 self.ccfits_files[stokes].append(os.path.join(self.working_dir,
                                                               "cc_{}_{}.fits".format(stokes, str(i+1).zfill(3))))
 
-        # Paths to FITS files with clean maps (the same parameters) for each Stokes.
-        self.dmap_fits_files = dict()
+        # Paths to difmap-format files with clean components for each Stokes.
+        self.difmap_files = dict()
         for stokes in self.stokes:
-            self.dmap_fits_files[stokes] = list()
+            self.difmap_files[stokes] = list()
         for stokes in self.stokes:
             for i in range(len(uvfits_files)):
-                self.dmap_fits_files[stokes].append(os.path.join(self.working_dir,
-                                                                 "dmap_{}_{}.fits".format(stokes, str(i+1).zfill(3))))
+                self.difmap_files[stokes].append(os.path.join(self.working_dir,
+                                                              "cc_{}_{}.dfm".format(stokes, str(i+1).zfill(3))))
 
-        # Containers for full stack images
+        # Paths to FITS files with residuals images (the same parameters) for each Stokes.
+        self.residuals_fits_files = dict()
+        for stokes in self.stokes:
+            self.residuals_fits_files[stokes] = list()
+        for stokes in self.stokes:
+            for i in range(len(uvfits_files)):
+                self.residuals_fits_files[stokes].append(os.path.join(self.working_dir,
+                                                                      "residuals_{}_{}.fits".format(stokes, str(i+1).zfill(3))))
+
+        # Paths to FITS files with beam-convolved CCs for each Stokes.
+        self.cconly_fits_files = dict()
+        for stokes in self.stokes:
+            self.cconly_fits_files[stokes] = list()
+        for stokes in self.stokes:
+            for i in range(len(uvfits_files)):
+                self.cconly_fits_files[stokes].append(os.path.join(self.working_dir,
+                                                                   "cconly_{}_{}.fits".format(stokes, str(i+1).zfill(3))))
+
+        # Containers for full stack CLEAN images
         self.stack_images = dict()
         for stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL",
                        "PPOL2", "FPOL2", "PANG2", "NEPOCHS", "PANGSTD",
@@ -123,19 +184,28 @@ class Stack(object):
         if use_V:
             self.stack_images["V"] = None
 
-        # Containers for full stack images
-        self.stack_dimages = dict()
+        # Containers for full stack CC-only images
+        self.cconly_stack_images = dict()
+        for stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL"):
+            self.cconly_stack_images[stokes] = None
+        if use_V:
+            self.cconly_stack_images["V"] = None
+
+        # Containers for full stack residual images
+        self.stack_residuals_images = dict()
         for stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL",
                        "PPOL2", "FPOL2", "PANG2", "NEPOCHS", "PANGSTD",
                        "FPOLSTD"):
-            self.stack_dimages[stokes] = None
+            self.stack_residuals_images[stokes] = None
         if use_V:
-            self.stack_dimages["V"] = None
+            self.stack_residuals_images["V"] = None
 
         self._image_ctor_params = dict()
         self._clean_original_data_with_the_same_params()
         if create_stacks:
             self.create_stack_images()
+            self.create_stack_residual_images()
+            self.create_stack_CConly_images()
 
         # Containers for CLEAN images
         self.images = dict()
@@ -187,7 +257,8 @@ class Stack(object):
                              mapsize_clean=self.mapsize_clean, shift=shift,
                              path_to_script=self.path_to_clean_script,
                              show_difmap_output=False, omit_residuals=self.omit_residuals,
-                             do_smooth=self.do_smooth, dmap="dmap_{}_{}.fits".format(stokes, str(i+1).zfill(3)))
+                             do_smooth=self.do_smooth, dmap="residuals_{}_{}.fits".format(stokes, str(i+1).zfill(3)),
+                             dfm_model="cc_{}_{}.mdl".format(stokes, str(i+1).zfill(3)))
 
         image = create_clean_image_from_fits_file(os.path.join(self.working_dir, "cc_I_001.fits"))
         self._image_ctor_params["imsize"] = image.imsize
@@ -195,6 +266,153 @@ class Stack(object):
         self._image_ctor_params["pixref"] = image.pixref
         self._image_ctor_params["freq"] = image.freq
         self._image_ctor_params["pixrefval"] = image.pixrefval
+
+    def create_stack_CConly_images(self):
+        print("Convolving CC with beam and creating residual-less images")
+        for stk in self.stokes:
+            for i in range(len(self.uvfits_files)):
+                convert_difmap_model_file_to_CCFITS(self.difmap_files[i], stk, self.mapsize, self.beam,
+                                                    self.uvfits_files[i], self.cconly_fits_files[stk][i])
+
+        print("Creating I cc-only stack")
+        ipol_image = Image()
+        ipol_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="I")
+        i_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.cconly_fits_files["I"]]
+        ipol_image.image = np.sum([i_image.image for i_image in i_images], axis=0) / \
+                           self.n_data
+        self.cconly_stack_images["I"] = ipol_image
+
+        print("Creating Q cc-only stack")
+        q_image = Image()
+        q_image._construct(imsize=self._image_ctor_params["imsize"],
+                           pixsize=self._image_ctor_params["pixsize"],
+                           pixref=self._image_ctor_params["pixref"],
+                           freq=self._image_ctor_params["freq"],
+                           pixrefval=self._image_ctor_params["pixrefval"],
+                           stokes="Q")
+        q_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.cconly_fits_files["Q"]]
+        q_image.image = np.sum([q_image.image for q_image in q_images], axis=0) / \
+                        self.n_data
+        self.cconly_stack_images["Q"] = q_image
+
+        print("Creating U cc-only stack")
+        u_image = Image()
+        u_image._construct(imsize=self._image_ctor_params["imsize"],
+                           pixsize=self._image_ctor_params["pixsize"],
+                           pixref=self._image_ctor_params["pixref"],
+                           freq=self._image_ctor_params["freq"],
+                           pixrefval=self._image_ctor_params["pixrefval"],
+                           stokes="U")
+        u_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.cconly_fits_files["U"]]
+        u_image.image = np.sum([u_image.image for u_image in u_images], axis=0) \
+                        / self.n_data
+        self.cconly_stack_images["U"] = u_image
+
+        if "V" in self.stokes:
+            print("Creating V cc-only stack")
+            v_image = Image()
+            v_image._construct(imsize=self._image_ctor_params["imsize"],
+                               pixsize=self._image_ctor_params["pixsize"],
+                               pixref=self._image_ctor_params["pixref"],
+                               freq=self._image_ctor_params["freq"],
+                               pixrefval=self._image_ctor_params["pixrefval"],
+                               stokes="V")
+            v_images = [create_image_from_fits_file(ccfits_file) for ccfits_file
+                        in self.cconly_fits_files["V"]]
+            v_image.image = np.sum([v_image.image for v_image in v_images], axis=0) \
+                            / self.n_data
+            self.cconly_stack_images["V"] = v_image
+
+        print("Creating PPOL cc-only stack")
+        ppol_image = Image()
+        ppol_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="PPOL")
+        ppol_array = np.hypot(self.cconly_stack_images["Q"].image,
+                              self.cconly_stack_images["U"].image)
+        ppol_image.image = ppol_array
+        self.cconly_stack_images["PPOL"] = ppol_image
+
+        print("Creating FPOL cc-only stack")
+        fpol_image = Image()
+        fpol_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="FPOL")
+        fpol_array = ppol_array/self.cconly_stack_images["I"].image
+        fpol_image.image = fpol_array
+        self.cconly_stack_images["FPOL"] = fpol_image
+
+    def create_stack_residual_images(self):
+        print("Creating I residual stack")
+        ipol_image = Image()
+        ipol_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="I")
+        i_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.residuals_fits_files["I"]]
+        ipol_image.image = np.sum([i_image.image for i_image in i_images], axis=0) / \
+                           self.n_data
+        self.stack_residuals_images["I"] = ipol_image
+
+        print("Creating Q residual stack")
+        q_image = Image()
+        q_image._construct(imsize=self._image_ctor_params["imsize"],
+                           pixsize=self._image_ctor_params["pixsize"],
+                           pixref=self._image_ctor_params["pixref"],
+                           freq=self._image_ctor_params["freq"],
+                           pixrefval=self._image_ctor_params["pixrefval"],
+                           stokes="Q")
+        q_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.residuals_fits_files["Q"]]
+        q_image.image = np.sum([q_image.image for q_image in q_images], axis=0) / \
+                        self.n_data
+        self.stack_residuals_images["Q"] = q_image
+
+        print("Creating U residual stack")
+        u_image = Image()
+        u_image._construct(imsize=self._image_ctor_params["imsize"],
+                           pixsize=self._image_ctor_params["pixsize"],
+                           pixref=self._image_ctor_params["pixref"],
+                           freq=self._image_ctor_params["freq"],
+                           pixrefval=self._image_ctor_params["pixrefval"],
+                           stokes="U")
+        u_images = [create_image_from_fits_file(ccfits_file) for ccfits_file in
+                    self.residuals_fits_files["U"]]
+        u_image.image = np.sum([u_image.image for u_image in u_images], axis=0) \
+                        / self.n_data
+        self.stack_residuals_images["U"] = u_image
+
+        if "V" in self.stokes:
+            print("Creating V residual stack")
+            v_image = Image()
+            v_image._construct(imsize=self._image_ctor_params["imsize"],
+                               pixsize=self._image_ctor_params["pixsize"],
+                               pixref=self._image_ctor_params["pixref"],
+                               freq=self._image_ctor_params["freq"],
+                               pixrefval=self._image_ctor_params["pixrefval"],
+                               stokes="V")
+            v_images = [create_image_from_fits_file(ccfits_file) for ccfits_file
+                        in self.residuals_fits_files["V"]]
+            v_image.image = np.sum([v_image.image for v_image in v_images], axis=0) \
+                            / self.n_data
+            self.stack_residuals_images["V"] = v_image
 
     def create_stack_images(self):
         print("Creating I stack")
@@ -211,20 +429,6 @@ class Stack(object):
                            self.n_data
         self.stack_images["I"] = ipol_image
 
-        ipol_dimage = Image()
-        ipol_dimage._construct(imsize=self._image_ctor_params["imsize"],
-                               pixsize=self._image_ctor_params["pixsize"],
-                               pixref=self._image_ctor_params["pixref"],
-                               freq=self._image_ctor_params["freq"],
-                               pixrefval=self._image_ctor_params["pixrefval"],
-                               stokes="I")
-        i_dimages = [create_image_from_fits_file(ccfits_file) for ccfits_file in
-                     self.dmap_fits_files["I"]]
-        ipol_dimage.image = np.sum([i_image.image for i_image in i_dimages], axis=0) /\
-                           self.n_data
-        self.stack_dimages["I"] = ipol_dimage
-
-
         print("Creating Q stack")
         q_image = Image()
         q_image._construct(imsize=self._image_ctor_params["imsize"],
@@ -238,19 +442,6 @@ class Stack(object):
         q_image.image = np.sum([q_image.image for q_image in q_images], axis=0) /\
                     self.n_data
         self.stack_images["Q"] = q_image
-
-        q_dimage = Image()
-        q_dimage._construct(imsize=self._image_ctor_params["imsize"],
-                            pixsize=self._image_ctor_params["pixsize"],
-                            pixref=self._image_ctor_params["pixref"],
-                            freq=self._image_ctor_params["freq"],
-                            pixrefval=self._image_ctor_params["pixrefval"],
-                            stokes="Q")
-        q_dimages = [create_image_from_fits_file(ccfits_file) for ccfits_file in
-                     self.dmap_fits_files["Q"]]
-        q_dimage.image = np.sum([q_image.image for q_image in q_dimages], axis=0) /\
-                     self.n_data
-        self.stack_dimages["Q"] = q_dimage
 
         print("Creating U stack")
         u_image = Image()
@@ -266,20 +457,6 @@ class Stack(object):
                         / self.n_data
         self.stack_images["U"] = u_image
 
-        u_dimage = Image()
-        u_dimage._construct(imsize=self._image_ctor_params["imsize"],
-                            pixsize=self._image_ctor_params["pixsize"],
-                            pixref=self._image_ctor_params["pixref"],
-                            freq=self._image_ctor_params["freq"],
-                            pixrefval=self._image_ctor_params["pixrefval"],
-                            stokes="U")
-        u_dimages = [create_image_from_fits_file(ccfits_file) for ccfits_file in
-                    self.dmap_fits_files["U"]]
-        u_dimage.image = np.sum([u_image.image for u_image in u_dimages], axis=0)\
-                        / self.n_data
-        self.stack_dimages["U"] = u_dimage
-
-
         if "V" in self.stokes:
             print("Creating V stack")
             v_image = Image()
@@ -294,19 +471,6 @@ class Stack(object):
             v_image.image = np.sum([v_image.image for v_image in v_images], axis=0)\
                             / self.n_data
             self.stack_images["V"] = v_image
-
-            v_dimage = Image()
-            v_dimage._construct(imsize=self._image_ctor_params["imsize"],
-                                pixsize=self._image_ctor_params["pixsize"],
-                                pixref=self._image_ctor_params["pixref"],
-                                freq=self._image_ctor_params["freq"],
-                                pixrefval=self._image_ctor_params["pixrefval"],
-                                stokes="V")
-            v_dimages = [create_image_from_fits_file(ccfits_file) for ccfits_file
-                        in self.dmap_fits_files["V"]]
-            v_dimage.image = np.sum([v_image.image for v_image in v_dimages], axis=0)\
-                            / self.n_data
-            self.stack_dimages["V"] = v_dimage
 
         print("Creating raw PPOL stack")
         ppol_image = Image()
@@ -337,7 +501,6 @@ class Stack(object):
         ppol_image.image = ppol_array
         self.stack_images["PPOL"] = ppol_image
 
-
         print("Creating FPOL stack")
         fpol_image = Image()
         fpol_image._construct(imsize=self._image_ctor_params["imsize"],
@@ -349,7 +512,6 @@ class Stack(object):
         fpol_array = ppol_array/self.stack_images["I"].image
         fpol_image.image = fpol_array
         self.stack_images["FPOL"] = fpol_image
-
 
         print("Creating PANG stack")
         pang_image = Image()
@@ -363,7 +525,6 @@ class Stack(object):
                                     self.stack_images["Q"].image)
         pang_image.image = pang_array
         self.stack_images["PANG"] = pang_image
-
 
         print("Creating PPOL2 stack")
         ppol2_image = Image()
@@ -408,7 +569,6 @@ class Stack(object):
         nepochs_image.image = image_of_nepochs_not_masked(ppol2_arrays)
         self.stack_images["NEPOCHS"] = nepochs_image
 
-
         print("Creating PANG2 stack")
         pang2_image = Image()
         pang2_image._construct(imsize=self._image_ctor_params["imsize"],
@@ -420,7 +580,6 @@ class Stack(object):
         pang2_image.image = stat_of_masked(pang2_arrays, stat="scipy_circmean",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["PANG2"] = pang2_image
-
 
         print("Creating STD PANG image")
         std_pang_image = Image()
@@ -434,7 +593,6 @@ class Stack(object):
                                               n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["PANGSTD"] = std_pang_image
 
-
         print("Creating FPOL2 stack")
         fpol2_image = Image()
         fpol2_image._construct(imsize=self._image_ctor_params["imsize"],
@@ -446,7 +604,6 @@ class Stack(object):
         fpol2_image.image = stat_of_masked(fpol2_arrays, stat="mean",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["FPOL2"] = fpol2_image
-
 
         print("Creating STD FPOL image")
         stdfpol_image = Image()
@@ -460,7 +617,6 @@ class Stack(object):
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["FPOLSTD"] = stdfpol_image
 
-
         print("Creating STD PPOL2 image")
         stdppol_image = Image()
         stdppol_image._construct(imsize=self._image_ctor_params["imsize"],
@@ -472,7 +628,6 @@ class Stack(object):
         stdppol_image.image = stat_of_masked(ppol2_arrays, stat="std",
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["PPOLSTD"] = stdppol_image
-
 
         pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
                                                  ("I", "Q", "U")}, self._npixels_beam, n_sigma=4, return_quantile=True)
@@ -487,9 +642,9 @@ class Stack(object):
 
         ipol_image = self.stack_images["I"]
         ppol_image = self.stack_images["PPOL"]
-        ipol_dimage = self.stack_dimages["I"]
-        qpol_dimage = self.stack_dimages["Q"]
-        upol_dimage = self.stack_dimages["U"]
+        ipol_dimage = self.stack_residuals_images["I"]
+        qpol_dimage = self.stack_residuals_images["Q"]
+        upol_dimage = self.stack_residuals_images["U"]
         fpol_image = self.stack_images["FPOL"]
         pang_image = self.stack_images["PANG"]
         ppol2_image = self.stack_images["PPOL2"]
@@ -506,7 +661,7 @@ class Stack(object):
         if not self.omit_residuals:
             std = find_image_std(ipol_image.image, beam_npixels=self._npixels_beam)
         else:
-            std = np.median(mad_std(ipol_dimage.image), mad_std(qpol_dimage.image), mad_std(upol_dimage.image))
+            std = np.median([mad_std(ipol_dimage.image), mad_std(qpol_dimage.image), mad_std(upol_dimage.image)])
         blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=6*std,
                              min_area_pix=4*self._npixels_beam, delta=10)
 
@@ -619,6 +774,34 @@ class Stack(object):
         fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
         plt.close()
 
+
+        print("Plotting residuals stack images with blc={}, trc={}".format(blc, trc))
+
+        fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(outdir, "{}_ipol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
+        fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(outdir, "{}_qpol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
+        fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                    min_abs_level=3*std, colors_mask=None, blc=blc, trc=trc,
+                    beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
+                    show_beam=True, show=True, cmap='bwr', color_clim=[-10*std, 10*std],
+                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+        fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+        plt.close()
+
+
     def save_stack_images(self, save_fn, outdir=None):
         save_dict = dict()
 
@@ -647,6 +830,24 @@ class Stack(object):
         np.savez_compressed(os.path.join(outdir, save_fn+"_stack.npz"),
                             **save_dict)
 
+    def save_cconly_stack_images(self, save_fn, outdir=None):
+        save_dict = dict()
+
+        if outdir is None:
+            outdir = self.working_dir
+
+        for stokes in self.cconly_stack_images:
+            # These are not masked, but masks for I & PPOL are saved and
+            # masks with other parameters can be recovered using I, Q, U, RPPOL
+            # (last is raw PPOL w/o bias correction)
+            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL"):
+                save_dict.update({stokes: self.stack_images[stokes].image})
+            else:
+                raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
+
+        np.savez_compressed(os.path.join(outdir, save_fn+"_cconly_stack.npz"),
+                            **save_dict)
+
     def save_stack_images_in_fits(self, save_fn, outdir=None):
 
         if outdir is None:
@@ -671,6 +872,24 @@ class Stack(object):
                                     header=hdr)
             elif stokes == "P_quantile":
                 continue
+            else:
+                raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
+
+            hdu.writeto(os.path.join(outdir, "{}_{}.fits".format(save_fn, stokes)), output_verify='ignore')
+
+    def save_cconly_stack_images_in_fits(self, save_fn, outdir=None):
+
+        if outdir is None:
+            outdir = self.working_dir
+
+        hdr = pf.open(self.ccfits_files["I"][0])[0].header
+
+        for stokes in self.cconly_stack_images:
+            # These are not masked, but masks for I & PPOL are saved and
+            # masks with other parameters can be recovered using I, Q, U, RPPOL
+            # (last is raw PPOL w/o bias correction)
+            if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL"):
+                hdu = pf.PrimaryHDU(data=self.stack_images[stokes].image, header=hdr)
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
