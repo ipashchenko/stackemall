@@ -289,7 +289,10 @@ class Stack(object):
         print("Convolving CC with beam and creating residual-less images")
         for stk in self.stokes:
             for i in range(len(self.uvfits_files)):
-                shift = self.shifts[i]
+                if self.shifts is not None:
+                    shift = self.shifts[i]
+                else:
+                    shift = None
                 convert_difmap_model_file_to_CCFITS(self.difmap_files[stk][i], stk, self.mapsize_clean, self.beam,
                                                     self.uvfits_files[i], self.cconly_fits_files[stk][i], shift=shift)
 
