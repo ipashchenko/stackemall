@@ -47,7 +47,8 @@ def downscale_uvdata_by_freq(uvdata):
 
 class ArtificialDataCreator(object):
     def __init__(self, uvfits_file, path_to_clean_script, mapsize_clean, beam,
-                 shift=None, models=None, working_dir=None, noise_from_V=True):
+                 shift=None, models=None, working_dir=None, noise_from_V=True,
+                 omit_residuals=False, do_smooth=True):
         """
         :param uvfits_file:
             UVFITS file with self-calibrated and D-terms corrected data.
@@ -68,6 +69,10 @@ class ArtificialDataCreator(object):
         :param noise_from_V: (optional)
             Use noise estimated from Stokes V? If not than use successive
             differences approach. (default: ``True``)
+        :param omit_residuals: (optional)
+            Used if ``models`` is None for creating data generating CC-models.
+        :param do_smooth: (optional)
+            Used if ``models`` is None for creating data generating CC-models.
         """
         self.uvfits_file = uvfits_file
         self.path_to_clean_script = path_to_clean_script
@@ -76,6 +81,8 @@ class ArtificialDataCreator(object):
         self.mapsize_clean = mapsize_clean
         self.beam = beam
         self.noise_from_V = noise_from_V
+        self.omit_residuals = omit_residuals
+        self.do_smooth = do_smooth
 
         self.stokes = ("I", "Q", "U")
 
@@ -115,7 +122,8 @@ class ArtificialDataCreator(object):
                          stokes=stokes, outpath=self.working_dir, beam_restore=self.beam,
                          mapsize_clean=self.mapsize_clean, shift=shift,
                          path_to_script=self.path_to_clean_script,
-                         show_difmap_output=False)
+                         show_difmap_output=False, omit_residuals=self.omit_residuals,
+                         do_smoot=self.do_smooth)
 
     def create_images(self, d_term=None, noise_scale=1.0, sigma_scale_amplitude=None,
                       sigma_evpa=None, constant_dterm_amplitude=False,

@@ -217,7 +217,8 @@ class Simulation(object):
                           shifts=None, shifts_errors=shifts_errors,
                           working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
-                          n_epochs_not_masked_min_std=n_epochs_not_masked_min_std)
+                          n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
+                          omit_residuals=self.omit_residuals, do_smooth=self.do_smooth)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
                                     outdir=self.working_dir)
             # stack.save_cconly_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),

@@ -21,7 +21,7 @@ from astropy.stats import mad_std
 
 
 def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, restore_beam, uvfits_template, out_ccfits,
-                                        show_difmap_output=True):
+                                        shift=None, show_difmap_output=True):
     """
     Using difmap-formated model file (e.g. flux, r, theta) obtain convolution of your model with the specified beam.
 
@@ -37,6 +37,9 @@ def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, rest
         Template uvfits observation to use. Difmap can't read model without having observation at hand.
     :param out_ccfits:
         File name to save resulting convolved map.
+    :param shift: (optional)
+        Shift to apply. Need this because wmodel doesn;t apply shift. If
+        ``None`` then do not apply shift. (default: ``None``)
     :param show_difmap_output: (optional)
         Boolean. Show Difmap output? (default: ``True``)
     """
@@ -47,6 +50,8 @@ def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, rest
     difmapout.write("select " + stokes + "\n")
     difmapout.write("rmodel " + difmap_model_file + "\n")
     difmapout.write("mapsize " + str(mapsize[0] * 2) + "," + str(mapsize[1]) + "\n")
+    if shift is not None:
+        difmapout.write("shift " + str(shift[0]) + ', ' + str(shift[1]) + "\n")
     print("Restoring difmap model with BEAM : bmin = " + str(restore_beam[1]) + ", bmaj = " + str(restore_beam[0]) + ", " + str(restore_beam[2]) + " deg")
     # default dimfap: false,true (parameters: omit_residuals, do_smooth)
     difmapout.write("restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) +
@@ -284,8 +289,9 @@ class Stack(object):
         print("Convolving CC with beam and creating residual-less images")
         for stk in self.stokes:
             for i in range(len(self.uvfits_files)):
+                shift = self.shifts[i]
                 convert_difmap_model_file_to_CCFITS(self.difmap_files[stk][i], stk, self.mapsize_clean, self.beam,
-                                                    self.uvfits_files[i], self.cconly_fits_files[stk][i])
+                                                    self.uvfits_files[i], self.cconly_fits_files[stk][i], shift=shift)
 
         print("Creating I cc-only stack")
         ipol_image = Image()
