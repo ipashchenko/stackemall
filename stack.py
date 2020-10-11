@@ -680,11 +680,13 @@ class Stack(object):
 
         if self.omit_residuals:
             residual_images = {stokes: self.stack_residuals_images[stokes].image for stokes in ("I", "Q", "U")}
+            n_sigma = 1
         else:
             residual_images = None
+            n_sigma = 4
 
         pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
-                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=4, return_quantile=True,
+                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=n_sigma, return_quantile=True,
                                                  residual_images=residual_images)
         self.stack_images["P_mask"] = pang_mask_dict["P"]
         self.stack_images["I_mask"] = pang_mask_dict["I"]
