@@ -654,7 +654,8 @@ if __name__ == "__main__":
                                         noise_from_V)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
     simulation.create_errors_images()
-    simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
+    if not omit_residuals:
+        simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
 
     npz_files = glob.glob(os.path.join(working_dir, "*mc_images*stack.npz"))
     for npz_file in npz_files:

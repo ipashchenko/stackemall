@@ -582,14 +582,16 @@ class Stack(object):
         for i, i_image, q_image, u_image in zip(range(len(i_images)), i_images, q_images, u_images):
 
             if self.omit_residuals:
+                n_sigma = 1
                 residual_images = {"I": create_image_from_fits_file(self.residuals_fits_files["I"][i]).image,
                                    "Q": create_image_from_fits_file(self.residuals_fits_files["Q"][i]).image,
                                    "U": create_image_from_fits_file(self.residuals_fits_files["U"][i]).image}
             else:
+                n_sigma = 3
                 residual_images = None
 
             ppol2_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
-                                                      self._npixels_beam, n_sigma=3, return_quantile=True,
+                                                      self._npixels_beam, n_sigma=n_sigma, return_quantile=True,
                                                       residual_images=residual_images)
             # Mask before correction for bias
             ppol2_array = np.ma.array(np.hypot(q_image.image, u_image.image), mask=ppol2_mask_dict["P"])
