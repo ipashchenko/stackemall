@@ -103,7 +103,10 @@ class Stack(object):
             consider when obtaining std. (default: ``5``)
         :param use_V: (optional)
             Boolean. Consider Stokes V stacking? (default: ``None`)
-
+        :param omit_residuals: (optional)
+            Difmap CLEAN parameter. (default: ``False``)
+        :param do_smooth: (optional)
+            Difmap CLEAN parameter. (default: ``True``)
         """
 
         # Check input data consistency
@@ -214,8 +217,9 @@ class Stack(object):
         self._clean_original_data_with_the_same_params()
         self.fill_cc_models()
         if create_stacks:
-            self.create_stack_images()
+            # Need this first if omit_residuals = True
             self.create_stack_residual_images()
+            self.create_stack_images()
             self.create_stack_CConly_images()
 
         # Containers for CLEAN images
@@ -575,12 +579,22 @@ class Stack(object):
         fpol2_arrays = list()
         pang2_arrays = list()
 
-        for i_image, q_image, u_image in zip(i_images, q_images, u_images):
+        for i, i_image, q_image, u_image in zip(range(len(i_images)), i_images, q_images, u_images):
+
+            if self.omit_residuals:
+                residual_images = {"I": create_image_from_fits_file(self.residuals_fits_files["I"][i]).image,
+                                   "Q": create_image_from_fits_file(self.residuals_fits_files["Q"][i]).image,
+                                   "U": create_image_from_fits_file(self.residuals_fits_files["U"][i]).image}
+            else:
+                residual_images = None
+
             ppol2_mask_dict, ppol_quantile = pol_mask({"I": i_image.image, "Q": q_image.image, "U": u_image.image},
-                                                      self._npixels_beam, n_sigma=3, return_quantile=True)
+                                                      self._npixels_beam, n_sigma=3, return_quantile=True,
+                                                      residual_images=residual_images)
             # Mask before correction for bias
             ppol2_array = np.ma.array(np.hypot(q_image.image, u_image.image), mask=ppol2_mask_dict["P"])
-            ppol2_array = correct_ppol_bias(i_image.image, ppol2_array, q_image.image, u_image.image, self._npixels_beam)
+            if not self.omit_residuals:
+                ppol2_array = correct_ppol_bias(i_image.image, ppol2_array, q_image.image, u_image.image, self._npixels_beam)
             ppol2_arrays.append(ppol2_array)
 
             fpol2_arrays.append(ppol2_array/i_image.image)
@@ -664,8 +678,14 @@ class Stack(object):
                                              n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
         self.stack_images["PPOLSTD"] = stdppol_image
 
+        if self.omit_residuals:
+            residual_images = {stokes: self.stack_residuals_images[stokes].image for stokes in ("I", "Q", "U")}
+        else:
+            residual_images = None
+
         pang_mask_dict, ppol_quantile = pol_mask({stokes: self.stack_images[stokes].image for stokes in
-                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=4, return_quantile=True)
+                                                 ("I", "Q", "U")}, self._npixels_beam, n_sigma=4, return_quantile=True,
+                                                 residual_images=residual_images)
         self.stack_images["P_mask"] = pang_mask_dict["P"]
         self.stack_images["I_mask"] = pang_mask_dict["I"]
         self.stack_images["P_quantile"] = ppol_quantile
@@ -700,6 +720,7 @@ class Stack(object):
         if not self.omit_residuals:
             std = find_image_std(ipol_image.image, beam_npixels=self._npixels_beam)
         else:
+            # Estimate std using residuals images
             std = np.median([mad_std(ipol_dimage.image), mad_std(qpol_dimage.image), mad_std(upol_dimage.image)])
         blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=6*std,
                              min_area_pix=4*self._npixels_beam, delta=10)

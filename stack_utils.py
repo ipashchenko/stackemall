@@ -296,7 +296,8 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
         return hp_low, frac
 
 
-def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False):
+def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False,
+             residual_images=False):
     """
     Find mask using stokes 'I' map and 'PPOL' map using specified number of
     sigma.
@@ -308,11 +309,17 @@ def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False):
     :param n_sigma: (optional)
         Number of sigma to consider for stokes 'I' and 'PPOL'. 1, 2 or 3.
         (default: ``2``)
+    :param residual_images: (optional)
+        Dictionary with residual images for each Stokes. If not ``None`` than
+        use this images to estimate std. (default: ``None``)
     :return:
         Dictionary with Boolean array of masks and P quantile (optionally).
     """
     quantile_dict = {1: 0.6827, 2: 0.9545, 3: 0.9973, 4: 0.99994}
-    rms_dict = find_iqu_image_std(*[stokes_image_dict[stokes] for stokes in ('I', 'Q', 'U')],  beam_pixels)
+    if residual_images is None:
+        rms_dict = find_iqu_image_std(*[stokes_image_dict[stokes] for stokes in ('I', 'Q', 'U')],  beam_pixels)
+    else :
+        rms_dict = {stokes: mad_std(residual_images[stokes]) for stokes in ("I", "Q", "U")}
 
     qu_rms = np.mean([rms_dict[stoke] for stoke in ('Q', 'U')])
     ppol_quantile = qu_rms * np.sqrt(-np.log((1. - quantile_dict[n_sigma]) ** 2.))
