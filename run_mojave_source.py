@@ -575,7 +575,7 @@ if __name__ == "__main__":
     source = sys.argv[1]
 
     # Number of realizations
-    n_mc = 5
+    n_mc = 30
 
     omit_residuals = False
     do_smooth = True
@@ -593,7 +593,7 @@ if __name__ == "__main__":
 
     # Directory to save intermediate and final results
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/run_1_full_rms"
-    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/noresid"
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right"
     working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
