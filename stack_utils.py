@@ -297,7 +297,7 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
 
 
 def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False,
-             residual_images=False):
+             residual_images=None):
     """
     Find mask using stokes 'I' map and 'PPOL' map using specified number of
     sigma.
