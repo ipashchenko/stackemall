@@ -729,6 +729,12 @@ class Stack(object):
         blc, trc = find_bbox(ipol_image.image, level=4*std, min_maxintensity_mjyperbeam=6*std,
                              min_area_pix=4*self._npixels_beam, delta=10)
 
+        # iplot expects AIPS-like behaviour of BLC, TRC
+        if blc[0] == 0:
+            blc = (1, blc[1])
+        if blc[1] == 0:
+            blc = (blc[0], 1)
+
         print("Plotting stack images with blc={}, trc={}".format(blc, trc))
         # I (1 contour) + P (color) + EVPA (vector)
         fig = iplot(ppol_image.image, x=ipol_image.x, y=ipol_image.y,
