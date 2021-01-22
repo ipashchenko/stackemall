@@ -371,144 +371,174 @@ class Simulation(object):
         # Use pre-computed and saved mask for I in addition to the mask of the
         # obtained error itself
         error = np.ma.array(error, mask=original_images["I_mask"])
-        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{I}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ipol_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{I}$, mJy/bm", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ipol_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # PPOL (bias-corrected)
         error = errors_dict["PPOL"]
         error = np.ma.array(error, mask=original_images["P_mask"])
-        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{P}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ppol_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppol_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # PANG
         error = errors_dict["PANG"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         highest = np.rad2deg(highest)
-        fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\rm EVPA}$, $ ^{\circ}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_pang_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
+                        min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{\rm EVPA}$, $ ^{\circ}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_pang_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # FPOL
         error = errors_dict["FPOL"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{m}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_fpol_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{m}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpol_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
 
         # PPOL2
         error = errors_dict["PPOL2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{P2}$, mJy/bm", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ppol2_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{P2}$, mJy/bm", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppol2_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # PANG2
         error = errors_dict["PANG2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         highest = np.rad2deg(highest)
-        fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\rm EVPA2}$, $ ^{\circ}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_pang2_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
+                        min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{\rm EVPA2}$, $ ^{\circ}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_pang2_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # FPOL2
         error = errors_dict["FPOL2"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{m2}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_fpol2_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{m2}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpol2_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # STDPANG2
         error = errors_dict["PANGSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
         highest = np.rad2deg(highest)
-        fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
-                    min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{\rm EVPA2}}$, $ ^{\circ}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_pangstd_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], np.rad2deg(error), x=some_image.x, y=some_image.y,
+                        min_abs_level=3 * std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{\sigma_{\rm EVPA2}}$, $ ^{\circ}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_pangstd_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # STDFPOL2
         error = errors_dict["FPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{m2}}$", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=[0, highest],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{\sigma_{m2}}$", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # STDPPOL2
         error = errors_dict["PPOLSTD"]
         error = np.ma.array(error, mask=original_images["P_mask"])
         # highest, frac = choose_range_from_positive_tailed_distribution(error.compressed())
-        fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$\sigma_{\sigma_{P2}}$, mJy/beam", show_beam=True,
-                    show=True, cmap='nipy_spectral_r', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_errors.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{\sigma_{P2}}$, mJy/beam", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         # FIXME: This is wrong measure of variability
         # # Original std_{FPOL} "/" error of std_{FPOL}. Values > 3 imply
@@ -531,41 +561,50 @@ class Simulation(object):
         bias = biases_dict["I"]
         bias = np.ma.array(bias, mask=original_images["I_mask"])
         max_bias_value = 1000*np.nanmax(np.abs(bias))
-        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$b_{I}$, mJy/bm", show_beam=True,
-                    show=True, cmap='bwr', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{I}$, mJy/bm", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         bias = biases_dict["PPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
         max_bias_value = 1000*np.nanmax(np.abs(bias))
-        fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
-                    show=True, cmap='bwr', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
         bias = biases_dict["FPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
         max_bias_value = 0.2
-        fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
-                    min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
-                    blc=blc, trc=trc, beam=beam, close=True,
-                    colorbar_label=r"$b_{m}$", show_beam=True,
-                    show=True, cmap='bwr', contour_color='black',
-                    plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
-                    dpi=300, bbox_inches="tight")
-        plt.close(fig)
+        try:
+            fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{m}$", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except TypeError:
+            pass
 
 
 if __name__ == "__main__":
@@ -593,13 +632,14 @@ if __name__ == "__main__":
 
     # Directory to save intermediate and final results
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/run_1_full_rms"
-    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right"
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right/k3"
     working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
 
     # Path to Dan Homan CLEAN-ing script
-    path_to_clean_script = "final_clean_rms"
+    # path_to_clean_script = "final_clean_rms"
+    path_to_clean_script = "script_clean_rms_k3"
 
     # Estimate thermal noise from Stokes V or use successive difference approach?
     noise_from_V = False
