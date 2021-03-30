@@ -11,6 +11,22 @@ from astropy.stats import mad_std
 from pycircstat import mean, std
 
 
+def parse_bad_epochs_file(fn):
+    bad_epochs_dict = dict()
+    with open(fn, "r") as fo:
+        lines = fo.readlines()
+        for line in lines:
+            splitted = line.split()
+            source = splitted[0]
+            epoch = splitted[2]
+            if source in bad_epochs_dict:
+                bad_epochs_dict[source].append(epoch)
+            else:
+                bad_epochs_dict[source] = list()
+                bad_epochs_dict[source].append(epoch)
+    return bad_epochs_dict
+
+
 # TODO: If per-epoch core shift errors are needed then change
 #  implementation of this function
 def get_inner_jet_PA(source, epoch, inner_jet_PA_file):
@@ -62,16 +78,23 @@ def get_beam_info(source):
     return bmaj, bmin, bpa
 
 
+# Note that this is real map sizes. Difmap expects twice than this!
 def choose_mapsize(source):
     if source in ("0219+428",
                   "0429+415",
                   "0333+321",
+                  "0519+011",
+                  "0805-077",
+                  "0820+560",
                   "0859-140",
                   "1228+126",
                   "1458+718",
+                  "1514+004",
                   "1514-241",
                   "1730-130",
-                  "1914-194"):
+                  "1807+698",
+                  "1914-194",
+                  "1928+738"):
         mapsize_clean = 1024
     elif source == "1345+125":
         mapsize_clean = 2048
@@ -297,7 +320,7 @@ def choose_range_from_positive_tailed_distribution(data, min_fraction=95):
 
 
 def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False,
-             residual_images=None):
+             residual_images=None, use_both_I_and_P_for_P_mask=True):
     """
     Find mask using stokes 'I' map and 'PPOL' map using specified number of
     sigma.
@@ -326,7 +349,12 @@ def pol_mask(stokes_image_dict, beam_pixels, n_sigma=2., return_quantile=False,
     i_cs_mask = stokes_image_dict['I'] < n_sigma * rms_dict['I']
     ppol_cs_image = np.hypot(stokes_image_dict['Q'], stokes_image_dict['U'])
     ppol_cs_mask = ppol_cs_image < ppol_quantile
-    mask_dict = {"I": i_cs_mask, "P": np.logical_or(i_cs_mask, ppol_cs_mask)}
+
+    if use_both_I_and_P_for_P_mask:
+        mask_dict = {"I": i_cs_mask, "P": np.logical_or(i_cs_mask, ppol_cs_mask)}
+    else:
+        mask_dict = {"I": i_cs_mask, "P": ppol_cs_mask}
+
     if not return_quantile:
         return mask_dict
     else:

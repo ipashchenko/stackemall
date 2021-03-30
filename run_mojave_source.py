@@ -14,7 +14,7 @@ from stack_utils import (parse_source_list, convert_mojave_epoch, choose_mapsize
                          get_beam_info_by_dec, get_inner_jet_PA)
 from create_artificial_data import (ArtificialDataCreator, rename_mc_stack_files)
 from stack import Stack
-from stack_utils import pol_mask, correct_ppol_bias
+from stack_utils import pol_mask, correct_ppol_bias, parse_bad_epochs_file
 import matplotlib.pyplot as plt
 import sys
 sys.path.insert(0, 've/vlbi_errors')
@@ -83,9 +83,11 @@ class Simulation(object):
                  shifts_errors_ell_bmin, shifts_errors_PA_file,
                  model_core_shifts_errors=True,
                  remove_artificial_uvfits_files=True,
+                 remove_artificial_ccfits_files=True,
                  create_original_V_stack=False,
+                 box_files=None,
                  path_to_uvfits_files="/mnt/jet1/yyk/VLBI/2cmVLBA/data",
-                 omit_residuals=False, do_smooth=True):
+                 omit_residuals=False, do_smooth=True, bad_epochs_file=None):
         """
         :param source:
             String B1950 name of the source.
@@ -112,6 +114,8 @@ class Simulation(object):
             arguments to model error of core offsets? (default: ``True``)
         :param remove_artificial_uvfits_files: (optional)
             Boolean. Remove created artificial UVFITS files? (default: ``True``)
+        :param remove_artificial_ccfits_files: (optional)
+            Boolean. Remove created artificial CCFITS files? (default: ``True``)
         :param create_original_V_stack: (optional)
             Boolean. Create stacks of Stokes V? (default: ``False``)
         :param path_to_uvfits_files: (optional)
@@ -125,16 +129,32 @@ class Simulation(object):
         self._npixels_beam = np.pi*common_beam[0]*common_beam[1]/common_mapsize_clean[1]**2
         self.working_dir = working_dir
         self.path_to_clean_script = path_to_clean_script
+        self.box_files = box_files
         self.omit_residuals = omit_residuals
         self.do_smooth = do_smooth
         self.uvfits_files = list()
         self.shifts = list()
         self.shifts_errors = list()
         self.model_core_shift_errors = model_core_shifts_errors
+
+        if bad_epochs_file is not None:
+            bad_epochs = parse_bad_epochs_file(bad_epochs_file)
+            if source in bad_epochs:
+                bad_epochs = bad_epochs[source]
+            else:
+                bad_epochs = []
+        else:
+            bad_epochs = []
+
         df = parse_source_list(source_epoch_core_offset_file, source=source)
         df = df.drop_duplicates()
+        print("Bad epochs are : ", bad_epochs)
         for index, row in df.iterrows():
             epoch = convert_mojave_epoch(row['epoch'])
+            print("Checking if epoch {} is in bad epochs...".format(epoch))
+            if epoch in bad_epochs:
+                print("Will skip epoch {} because of large image rms".format(epoch))
+                continue
             self.shifts.append((row['shift_ra'], row['shift_dec']))
             uvfits_file = "{}/{}/{}/{}.u.{}.uvf".format(path_to_uvfits_files, source, epoch, source, epoch)
             self.uvfits_files.append(uvfits_file)
@@ -143,11 +163,13 @@ class Simulation(object):
             pa = get_inner_jet_PA(source, epoch, shifts_errors_PA_file)
             self.shifts_errors.append((shifts_errors_ell_bmaj, shifts_errors_ell_bmin, pa))
 
+
         # Template header used for saving results in FITS format
         self.hdr = None
         # Template image
         self.some_image = None
         self.remove_artificial_uvfits_files = remove_artificial_uvfits_files
+        self.remove_artificial_ccfits_files = remove_artificial_ccfits_files
         self.create_original_V_stack = create_original_V_stack
         # Original stack
         self.original_stack = None
@@ -178,14 +200,14 @@ class Simulation(object):
             creator.remove_cc_fits()
         rename_mc_stack_files(self.working_dir)
 
-    def create_original_stack(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
+    def create_original_stack(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=True):
         stack = Stack(self.uvfits_files, self.common_mapsize_clean, self.common_beam,
                       working_dir=self.working_dir, create_stacks=True,
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
                       use_V=self.create_original_V_stack, omit_residuals=self.omit_residuals,
-                      do_smooth=self.do_smooth)
+                      do_smooth=self.do_smooth, box_files=self.box_files)
         stack.save_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.save_cconly_stack_images("{}_original".format(self.source),
@@ -199,7 +221,8 @@ class Simulation(object):
         self.hdr = pf.open(stack.ccfits_files["I"][0])[0].header
         self.some_image = create_clean_image_from_fits_file(stack.ccfits_files["I"][0])
         # Remove CLEAN FITS-files
-        stack.remove_cc_fits()
+        if remove_original_clean_files:
+            stack.remove_cc_fits()
         self.original_stack = stack
 
     def create_artificial_stacks(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std):
@@ -218,7 +241,8 @@ class Simulation(object):
                           working_dir=data_dir, create_stacks=True,
                           n_epochs_not_masked_min=n_epochs_not_masked_min,
                           n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
-                          omit_residuals=self.omit_residuals, do_smooth=self.do_smooth)
+                          omit_residuals=self.omit_residuals, do_smooth=self.do_smooth,
+                          box_files=self.box_files)
             stack.save_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
                                     outdir=self.working_dir)
             # stack.save_cconly_stack_images("{}_mc_images_{}".format(self.source, str(i + 1).zfill(3)),
@@ -281,7 +305,7 @@ class Simulation(object):
             std_ipol = stat_of_masked(ipol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
             std_ppol = stat_of_masked(ppol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
             std_fpol = stat_of_masked(fpol_arrays, stat="std", n_epochs_not_masked_min=n_realizations_not_masked_min)
-            std_pang = stat_of_masked(fpol_arrays, stat="scipy_circstd", n_epochs_not_masked_min=n_realizations_not_masked_min)
+            std_pang = stat_of_masked(pang_arrays, stat="scipy_circstd", n_epochs_not_masked_min=n_realizations_not_masked_min)
             std_dict = {"IPOL": std_ipol, "PPOL": std_ppol, "FPOL": std_fpol, "PANG": std_pang}
 
             # Save it to FITS
@@ -296,10 +320,11 @@ class Simulation(object):
                                     **epoch_errors_dict)
 
         # Remove directories with CC FITS files
-        for i_real in range(self.n_mc):
-            shutil.rmtree(os.path.join(self.working_dir, "CC_{}".format(str(i_real+1).zfill(3))))
+        if self.remove_artificial_ccfits_files:
+            for i_real in range(self.n_mc):
+                shutil.rmtree(os.path.join(self.working_dir, "CC_{}".format(str(i_real+1).zfill(3))))
 
-    def create_errors_images(self, create_pictures=True):
+    def create_errors_images(self, n_epochs_not_masked_min_std, create_pictures=True):
 
         some_image = self.some_image
         beam = self.common_beam
@@ -308,13 +333,13 @@ class Simulation(object):
 
         errors_dict = dict()
         biases_dict = dict()
-        for stokes in ("I", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
+        for stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
             mc_images = list()
             for i in range(self.n_mc):
                 npz = np.load(os.path.join(self.working_dir, "{}_mc_images_{}_stack.npz".format(self.source, str(i + 1).zfill(3))))
                 array = npz[stokes]
                 # This stacks are not masked => use trivial mask with zeros
-                if stokes in ("I", "PPOL", "PANG", "FPOL"):
+                if stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL"):
                     array = np.ma.array(array, mask=np.zeros(array.shape, dtype=bool))
                 elif stokes in ("PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
                     # Masked array with masked values having nans
@@ -336,7 +361,7 @@ class Simulation(object):
             hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)), output_verify='ignore')
 
             # Find biases
-            if stokes in ("I", "PPOL", "FPOL"):
+            if stokes in ("I", "Q", "U", "PPOL", "FPOL"):
                 mean = stat_of_masked(mc_images, stat="mean",
                                       n_epochs_not_masked_min=n_epochs_not_masked_min_std)
                 # FIXME: Here must be beam-convolved CC-images (that are used to build artificial data)!
@@ -381,7 +406,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ipol_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # PPOL (bias-corrected)
@@ -397,7 +422,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ppol_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # PANG
@@ -415,7 +440,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_pang_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # FPOL
@@ -432,7 +457,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_fpol_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
 
@@ -450,7 +475,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ppol2_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # PANG2
@@ -468,7 +493,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_pang2_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # FPOL2
@@ -485,7 +510,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_fpol2_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # STDPANG2
@@ -503,7 +528,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_pangstd_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # STDFPOL2
@@ -520,7 +545,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # STDPPOL2
@@ -537,7 +562,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         # FIXME: This is wrong measure of variability
@@ -571,7 +596,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ipol_bias.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         bias = biases_dict["PPOL"]
@@ -587,7 +612,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_ppol_bias.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
         bias = biases_dict["FPOL"]
@@ -603,7 +628,7 @@ class Simulation(object):
             fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
-        except TypeError:
+        except (TypeError, IndexError, ValueError):
             pass
 
 
@@ -621,6 +646,8 @@ if __name__ == "__main__":
 
     # Remove created artificial UVFITS files to save disk space?
     remove_artificial_uvfits_files = True
+    # Remove created artificial CCFITS files to save disk space?
+    remove_artificial_ccfits_files = False
 
     # Common map parameters
     common_mapsize_clean = choose_mapsize(source)
@@ -630,16 +657,39 @@ if __name__ == "__main__":
     # File with source, epoch, core offsets
     source_epoch_core_offset_file = "core_offsets.txt"
 
+    # File with source, epoch of filtered by image rms
+    # bad_epochs_file = "final_clean_rms_epoch_filter"
+    bad_epochs_file = "deleted_by_rms_filter_k3"
+
     # Directory to save intermediate and final results
-    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/run_1_full_rms"
-    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right/k3"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right/k3"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_clean_rms"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_bad"
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_bad_noinvert"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_check_invert"
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
     working_dir = os.path.join(results_dir, source)
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
 
     # Path to Dan Homan CLEAN-ing script
-    # path_to_clean_script = "final_clean_rms"
-    path_to_clean_script = "script_clean_rms_k3"
+    # k = 3 overCLEAN
+    # path_to_clean_script = "script_clean_rms_k3"
+    # CLEAN with boxes for e.g. 3C273
+    # path_to_clean_script = "final_clean_box"
+    # Deep CLEAN
+    # path_to_clean_script = "final_clean_rms_last"
+    # k 3
+    path_to_clean_script = "script_clean_rms_last"
+    # My variant of invert for k3
+    # path_to_clean_script = "script_clean_rms_last_invert"
+    # Yura's variant of invert for k3
+    # path_to_clean_script = "script_clean_rms_invert"
+
+    # List of paths to CLEAN box-files in the same order as uvfits-files
+    # box_files = sorted(glob.glob(os.path.join("/home/ilya/github/stackemall/external_scripts/wins", "{}*.win".format(source))))
+    box_files = None
 
     # Estimate thermal noise from Stokes V or use successive difference approach?
     noise_from_V = False
@@ -672,10 +722,10 @@ if __name__ == "__main__":
     n_epochs_not_masked_min = 1
     # Number of non-masked epochs in pixel to consider when calculating errors
     # or stds of PANG, FPOL.
-    n_epochs_not_masked_min_std = 5
+    n_epochs_not_masked_min_std = 3
     # Number of non-masked realizations in pixel to consider when calculating
     # errors for individual epochs maps.
-    n_realizations_not_masked_min = 5
+    n_realizations_not_masked_min = 3
 
     path_to_uvfits_files = "/mnt/jet1/yyk/VLBI/2cmVLBA/data"
 
@@ -685,15 +735,16 @@ if __name__ == "__main__":
                             shifts_errors_ell_bmin, shifts_errors_PA_file,
                             model_core_shifts_errors=model_core_shifts_errors,
                             remove_artificial_uvfits_files=remove_artificial_uvfits_files,
-                            create_original_V_stack=False,
+                            remove_artificial_ccfits_files=remove_artificial_ccfits_files,
+                            create_original_V_stack=False, box_files=box_files,
                             path_to_uvfits_files=path_to_uvfits_files,
-                            omit_residuals=omit_residuals, do_smooth=do_smooth)
-    simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
+                            omit_residuals=omit_residuals, do_smooth=do_smooth, bad_epochs_file=bad_epochs_file)
+    simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=True)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file,
                                         noise_from_V)
     simulation.create_artificial_stacks(n_epochs_not_masked_min, n_epochs_not_masked_min_std)
-    simulation.create_errors_images()
+    simulation.create_errors_images(n_epochs_not_masked_min_std)
     if not omit_residuals:
         simulation.create_individual_epoch_error_images(n_realizations_not_masked_min)
 

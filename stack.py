@@ -69,7 +69,7 @@ def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, rest
 
 class Stack(object):
     def __init__(self, uvfits_files, mapsize_clean, beam, path_to_clean_script,
-                 shifts=None, shifts_errors=None, working_dir=None,
+                 shifts=None, box_files=None, shifts_errors=None, working_dir=None,
                  create_stacks=True, n_epochs_not_masked_min=1,
                  n_epochs_not_masked_min_std=5, use_V=False,
                  omit_residuals=False, do_smooth=True):
@@ -130,6 +130,7 @@ class Stack(object):
         self.uvfits_files = uvfits_files
         self.n_data = len(self.uvfits_files)
         self.shifts = shifts
+        self.box_files = box_files
         self.shifts_errors = shifts_errors
         self.mapsize_clean = mapsize_clean
         self.beam = beam
@@ -233,6 +234,12 @@ class Stack(object):
         print("Cleaning uv-data with the same parameters: mapsize = {}, restore beam = {}".format(self.mapsize_clean, self.beam))
         for i, uvfits_file in enumerate(self.uvfits_files):
 
+            if self.box_files is not None:
+                box_file = self.box_files[i]
+                print("Using CLEAN box file: ", box_file)
+            else:
+                box_file = None
+
             if self.shifts is not None:
                 shift = self.shifts[i]
                 if self.shifts_errors is not None:
@@ -270,7 +277,7 @@ class Stack(object):
                 clean_difmap(fname=uvfits_file, outfname="cc_{}_{}.fits".format(stokes, str(i+1).zfill(3)),
                              stokes=stokes, outpath=self.working_dir, beam_restore=self.beam,
                              mapsize_clean=self.mapsize_clean, shift=shift,
-                             path_to_script=self.path_to_clean_script,
+                             path_to_script=self.path_to_clean_script, window_file=box_file, box_rms_factor=4,
                              show_difmap_output=False, omit_residuals=self.omit_residuals,
                              do_smooth=self.do_smooth, dmap="residuals_{}_{}.fits".format(stokes, str(i+1).zfill(3)),
                              dfm_model="cc_{}_{}.mdl".format(stokes, str(i+1).zfill(3)))
