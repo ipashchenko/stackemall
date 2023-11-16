@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import os
 import shutil
 import numpy as np
@@ -7,8 +10,152 @@ from scipy.ndimage.morphology import generate_binary_structure
 from skimage.measure import regionprops
 from scipy.stats import percentileofscore, scoreatpercentile
 from scipy.stats import circstd, circmean
+import astropy.io.fits as pf
+from astropy.wcs import WCS
 from astropy.stats import mad_std
+from astropy.convolution import convolve, Gaussian2DKernel
+from astropy import units as u
 from pycircstat import mean, std
+import sys
+sys.path.insert(0, 've/vlbi_errors')
+from from_fits import create_clean_image_from_fits_file
+
+
+
+# def parse_std_file(fn, bad_sources_fn=None):
+#     bad_sources = list()
+#     with open(fn, "r") as fo:
+#         lines = fo.readlines()
+#     for line in lines:
+#         if line.startswith("#"):
+#             continue
+#         splitted = line.split()
+#         source = splitted[0]
+#         i_rms_ratio = float(splitted[2])
+#         p_rms_ratio = float(splitted[4])
+#         if i_rms_ratio > 1 or p_rms_ratio > 1:
+#             bad_sources.append(source)
+#     if bad_sources_fn is not None:
+#         with open(bad_sources_fn, "w") as fo:
+#             for source in bad_sources:
+#                 fo.write(source + "\n")
+#     return bad_sources
+
+
+
+def get_mask_for_ccstack(iccfiles, cc_conv_cutoff_mjy=0.0075, kern_width=10,
+                         imsize=512):
+    """
+    Get mask containing CC of stack.
+    :param iccfiles:
+        Iterable of CC-files.
+    :param cc_conv_cutoff_mjy:
+    :param kern_width:
+    :return:
+        Masked numpy 2D array.
+    """
+    # iccfiles = glob.glob(os.path.join(cc_dir, "cc_I_*.fits"))
+    iccimages = [create_clean_image_from_fits_file(ccfile) for ccfile in iccfiles]
+    icconly = np.mean([ccimage.cc for ccimage in iccimages], axis=0)
+    cconly_conv = convolve(1000*icconly, Gaussian2DKernel(x_stddev=kern_width))
+    signal = cconly_conv > cc_conv_cutoff_mjy
+    s = generate_binary_structure(2, 2)
+    labeled_array, num_features = label(signal, structure=s)
+    props = regionprops(labeled_array, intensity_image=cconly_conv)
+    max_prop = sorted(props, key=lambda x: x.area, reverse=True)[0]
+    mask = np.zeros((imsize, imsize), dtype=bool)
+    bbox = max_prop.bbox
+    mask[bbox[0]:bbox[2], bbox[1]:bbox[3]] = max_prop.filled_image
+    return mask
+
+
+def filter_CC(ccfits, mask, outname=None, plotsave_fn=None):
+    """
+    Filter CC from FITS file using specified mask. Only CC that fall into the
+    mask are kept. Write resulting set of CC to new (or old) CC FITS.
+
+    :param ccfits:
+        CC FITS file.
+    :param mask:
+        Mask where the region of source flux being True.
+    :param outname: (optional)
+        CC FITS name to write the resulting CCs. If ``None`` than rewrite.
+        (default: ``None``)
+    :param plotsave_fn: (optional)
+        File to save plot. If ``None`` than do not plot. (default: ``None``)
+    """
+    hdus = pf.open(ccfits)
+    hdus.verify("silentfix")
+    data = hdus[1].data
+    data_ = data.copy()
+    deg2mas = u.deg.to(u.mas)
+
+    header = pf.getheader(ccfits)
+    imsize = header["NAXIS1"]
+    wcs = WCS(header)
+    # Ignore FREQ, STOKES - only RA, DEC matters here
+    wcs = wcs.celestial
+
+    # Make offset coordinates
+    wcs.wcs.crval = 0, 0
+    wcs.wcs.ctype = 'XOFFSET', 'YOFFSET'
+    wcs.wcs.cunit = 'deg', 'deg'
+
+    xs = list()
+    ys = list()
+    xs_del = list()
+    ys_del = list()
+    fs_del = list()
+    for flux, x_orig, y_orig in zip(data['FLUX'], data['DELTAX'], data['DELTAY']):
+        x, y = wcs.world_to_array_index(x_orig*u.deg, y_orig*u.deg)
+
+        if x >= imsize:
+            x = imsize - 1
+        if y >= imsize:
+            y = imsize - 1
+        if mask[x, y]:
+            # Keep this component
+            xs.append(x)
+            ys.append(y)
+        else:
+            # Remove row from rec_array
+            xs_del.append(x_orig)
+            ys_del.append(y_orig)
+            fs_del.append(flux)
+
+    for (x, y, f) in zip(xs_del, ys_del, fs_del):
+        local_mask = ~np.logical_and(np.logical_and(data_["DELTAX"] == x, data_["DELTAY"] == y),
+                                     data_["FLUX"] == f)
+        data_ = data_.compress(local_mask, axis=0)
+    print("Deleted {} components".format(len(xs_del)))
+
+    if plotsave_fn is not None:
+        a = data_['DELTAX']*deg2mas
+        b = data_['DELTAY']*deg2mas
+        a_all = data['DELTAX']*deg2mas
+        b_all = data['DELTAY']*deg2mas
+
+        fig, axes = plt.subplots(1, 1)
+        # im = axes.scatter(a, b, c=np.log10(1000*data_["FLUX"]), vmin=0, s=1, cmap="jet")
+        axes.scatter(a_all, b_all, color="gray", alpha=0.25, s=2)
+        axes.scatter(a, b, color="red", alpha=0.5, s=1)
+        # from mpl_toolkits.axes_grid1 import make_axes_locatable
+        # divider = make_axes_locatable(axes)
+        # cax = divider.append_axes("right", size="5%", pad=0.00)
+        # cb = fig.colorbar(im, cax=cax)
+        # cb.set_label("CC Flux, Jy")
+        axes.invert_xaxis()
+        axes.set_aspect("equal")
+        axes.set_xlabel("RA, mas")
+        axes.set_ylabel("DEC, mas")
+        plt.savefig(plotsave_fn, bbox_inches="tight", dpi=300)
+        plt.close()
+
+    hdus[1].data = data_
+    hdus[1].header["NAXIS2"] = len(data_)
+    if outname is None:
+        outname = ccfits
+    hdus.writeto(outname, overwrite=True)
 
 
 def parse_bad_epochs_file(fn):
@@ -91,6 +238,7 @@ def choose_mapsize(source):
                   "1458+718",
                   "1514+004",
                   "1514-241",
+                  "1641+399",
                   "1730-130",
                   "1807+698",
                   "1914-194",
@@ -421,7 +569,7 @@ def stat_of_masked(marrays, stat="mean", n_epochs_not_masked_min=1):
     :return:
         Masked array.
     """
-    statistics = ("mean", "std", "circmean", "circstd", "scipy_circmean", "scipy_circstd")
+    statistics = ("mean", "median", "std", "circmean", "circstd", "scipy_circmean", "scipy_circstd")
     if stat not in statistics:
         raise Exception("stat must be among {}!".format(statistics))
     # General mask based on number of unmasked pixels in stack of pixels.
@@ -437,6 +585,9 @@ def stat_of_masked(marrays, stat="mean", n_epochs_not_masked_min=1):
 
     if stat == "mean":
         result = np.ma.mean(marrays_stacked, axis=2)
+
+    elif stat == "median":
+        result = np.ma.median(marrays_stacked, axis=2)
 
     elif stat == "std":
         result = np.ma.std(marrays_stacked, axis=2)

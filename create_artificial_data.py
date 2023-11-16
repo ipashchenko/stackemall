@@ -180,13 +180,19 @@ class ArtificialDataCreator(object):
 
         if sigma_scale_amplitude is not None:
             print("   * adding scaling of amplitudes of all hands...")
+            # The same scale
             scale = 1.0+np.random.normal(0, sigma_scale_amplitude, size=1)[0]
             uvdata.scale_hands(scale_r=scale, scale_l=scale)
+            # Independent scales
+            # scale_r = 1.0 + np.random.normal(0, sigma_scale_amplitude, size=1)[0]
+            # scale_l = 1.0 + np.random.normal(0, sigma_scale_amplitude, size=1)[0]
+            # uvdata.scale_hands(scale_r=scale_r, scale_l=scale_l)
 
         if d_term is not None:
             # Getting dictionary with keys - [antenna name][integer of IF]["R"/"L"]
             # and values - complex D-terms.
             if constant_dterm_amplitude:
+                print("Constant amplitude D-term residuals! ==================")
                 d_dict = create_const_amp_D_dict(uvdata, amp_D=d_term)
             else:
                 d_dict = create_random_D_dict(uvdata, sigma_D=d_term)

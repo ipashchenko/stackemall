@@ -3,8 +3,15 @@
 !                     clean without windows for the remainder of
 !                     the CLEAN as normal.
 !
-! Version: 2012_07_11
+! Version: 2012_08_02
 ! Change Log:
+!    2012_08_02 --  Discovered that the windowed clean does not always 
+!                   interact as expected with the dynamic range cutoff
+!                   criteria in early rounds of cleaning (if there is
+!                   a bright spot of noise outside windows).  So now
+!                   pre-defining the absolute map peak at the start of
+!                   the clean to always be the reference location for the
+!                   dynamic range test	
 !    2012_07_11 --  Added no improvement critera for stopping boxed part
 !                   of CLEAN to avoid over-cleaning with boxes, even with
 !                   the increased target RMS value during boxed CLEAN. 
@@ -107,6 +114,8 @@ integer clean_niter;
 float clean_gain; clean_gain = 0.03
 float dynam;
 float flux_peak;
+float peak_x;
+float peak_y;
 
 ! Define the inner loop as a macro.
 
@@ -123,12 +132,12 @@ float target_rms
 float V_rms
 
 #+map_residual \
-flux_peak = peak(flux);\
+flux_peak = mapvalue(peak_x,peak_y);\
 flux_cutoff = imstat(rms) * dynam;\
 while(abs(flux_peak)>flux_cutoff);\
  clean clean_niter,clean_gain;\
  flux_cutoff = imstat(rms) * dynam;\
- flux_peak = peak(flux);\
+ flux_peak = mapvalue(peak_x,peak_y);\
 end while
 
 ! The following macro stops
@@ -200,6 +209,15 @@ uvtaper 0
 
 print "******* FIRST TRY SUPER-UNIFORM WEIGHTING (BOXED) *******"
 print "**** -- only if dynamic range is higher than 10 -- *****"
+
+! Define fixed peak location from which 
+!  dynamic range stopping criteria will
+!  be measured.  This modification is 
+!  necessary to accomodiate clean windows
+!  where the peak(flux) value could come
+!  from outside the clean area 
+peak_x = peak(x);
+peak_y = peak(y);
 
 dynam = 10
 clean_niter = 10

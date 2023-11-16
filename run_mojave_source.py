@@ -163,6 +163,8 @@ class Simulation(object):
             pa = get_inner_jet_PA(source, epoch, shifts_errors_PA_file)
             self.shifts_errors.append((shifts_errors_ell_bmaj, shifts_errors_ell_bmin, pa))
 
+        print("UVFITS files:", self.uvfits_files)
+
 
         # Template header used for saving results in FITS format
         self.hdr = None
@@ -200,14 +202,18 @@ class Simulation(object):
             creator.remove_cc_fits()
         rename_mc_stack_files(self.working_dir)
 
-    def create_original_stack(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=True):
+    def create_original_stack(self, n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=True,
+                              mask_cc_models_using_their_stack=False):
+        if mask_cc_models_using_their_stack:
+            print("Will mask CC-models using their stack!")
         stack = Stack(self.uvfits_files, self.common_mapsize_clean, self.common_beam,
                       working_dir=self.working_dir, create_stacks=True,
                       shifts=self.shifts, path_to_clean_script=self.path_to_clean_script,
                       n_epochs_not_masked_min=n_epochs_not_masked_min,
                       n_epochs_not_masked_min_std=n_epochs_not_masked_min_std,
                       use_V=self.create_original_V_stack, omit_residuals=self.omit_residuals,
-                      do_smooth=self.do_smooth, box_files=self.box_files)
+                      do_smooth=self.do_smooth, box_files=self.box_files,
+                      mask_cc_models_using_their_stack=mask_cc_models_using_their_stack)
         stack.save_stack_images("{}_original".format(self.source),
                                 outdir=self.working_dir)
         stack.save_cconly_stack_images("{}_original".format(self.source),
@@ -329,17 +335,18 @@ class Simulation(object):
         some_image = self.some_image
         beam = self.common_beam
         original_images = np.load(os.path.join(self.working_dir, "{}_original_stack.npz".format(self.source)))
+        # CC-only stack images contain I, Q, U, V, PPOL, FPOL, PANG
         original_cconly_images = np.load(os.path.join(self.working_dir, "{}_original_cconly_stack.npz".format(self.source)))
 
         errors_dict = dict()
         biases_dict = dict()
-        for stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
+        for stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL", "PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
             mc_images = list()
             for i in range(self.n_mc):
                 npz = np.load(os.path.join(self.working_dir, "{}_mc_images_{}_stack.npz".format(self.source, str(i + 1).zfill(3))))
                 array = npz[stokes]
                 # This stacks are not masked => use trivial mask with zeros
-                if stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL"):
+                if stokes in ("I", "Q", "U", "RPPOL", "PPOL", "PANG", "FPOL"):
                     array = np.ma.array(array, mask=np.zeros(array.shape, dtype=bool))
                 elif stokes in ("PPOL2", "FPOL2", "PANG2", "PPOLSTD", "FPOLSTD", "PANGSTD"):
                     # Masked array with masked values having nans
@@ -361,11 +368,14 @@ class Simulation(object):
             hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_error.fits".format(self.source, stokes)), output_verify='ignore')
 
             # Find biases
-            if stokes in ("I", "Q", "U", "PPOL", "FPOL"):
+            if stokes in ("I", "Q", "U", "RPPOL", "PPOL", "FPOL", "PPOL2", "FPOL2", "FPOLSTD", "PPOLSTD"):
                 mean = stat_of_masked(mc_images, stat="mean",
                                       n_epochs_not_masked_min=n_epochs_not_masked_min_std)
-                # FIXME: Here must be beam-convolved CC-images (that are used to build artificial data)!
-                bias = mean - original_cconly_images[stokes]
+                # Here we use beam-convolved CC-images (that are used to build artificial data)!
+                if stokes == "RPPOL":
+                    bias = mean - original_cconly_images["PPOL"]
+                else:
+                    bias = mean - original_cconly_images[stokes]
                 biases_dict[stokes] = np.ma.filled(bias, np.nan)
                 hdu = pf.PrimaryHDU(data=np.ma.filled(bias, np.nan), header=self.hdr)
                 hdu.writeto(os.path.join(self.working_dir, "{}_{}_stack_bias.fits".format(self.source, stokes)), output_verify='ignore')
@@ -420,6 +430,22 @@ class Simulation(object):
                         show=True, cmap='nipy_spectral_r', contour_color='black',
                         plot_colorbar=True, contour_linewidth=0.25)
             fig.savefig(os.path.join(self.working_dir, "{}_ppol_errors.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
+        # RPPOL (w/o Rice bias correction)
+        error = errors_dict["RPPOL"]
+        error = np.ma.array(error, mask=original_images["P_mask"])
+        try:
+            fig = iplot(original_images["I"], 1000*error, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=error.mask, color_clim=None,
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$\sigma_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='nipy_spectral_r', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_rppol_errors.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
         except (TypeError, IndexError, ValueError):
@@ -615,6 +641,22 @@ class Simulation(object):
         except (TypeError, IndexError, ValueError):
             pass
 
+        bias = biases_dict["RPPOL"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
+        try:
+            fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_rppol_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
         bias = biases_dict["FPOL"]
         bias = np.ma.array(bias, mask=original_images["P_mask"])
         max_bias_value = 0.2
@@ -626,6 +668,70 @@ class Simulation(object):
                         show=True, cmap='bwr', contour_color='black',
                         plot_colorbar=True, contour_linewidth=0.25)
             fig.savefig(os.path.join(self.working_dir, "{}_fpol_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
+        bias = biases_dict["PPOL2"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
+        try:
+            fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppol2_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
+        bias = biases_dict["FPOL2"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = 0.2
+        try:
+            fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{m}$", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpol2_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
+        bias = biases_dict["PPOLSTD"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = 1000*np.nanmax(np.abs(bias))
+        try:
+            fig = iplot(original_images["I"], 1000*bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{P}$, mJy/bm", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_ppolstd_bias.png".format(self.source)),
+                        dpi=300, bbox_inches="tight")
+            plt.close(fig)
+        except (TypeError, IndexError, ValueError):
+            pass
+
+        bias = biases_dict["FPOLSTD"]
+        bias = np.ma.array(bias, mask=original_images["P_mask"])
+        max_bias_value = 0.2
+        try:
+            fig = iplot(original_images["I"], bias, x=some_image.x, y=some_image.y,
+                        min_abs_level=3*std, colors_mask=bias.mask, color_clim=[-max_bias_value, max_bias_value],
+                        blc=blc, trc=trc, beam=beam, close=True,
+                        colorbar_label=r"$b_{m}$", show_beam=True,
+                        show=True, cmap='bwr', contour_color='black',
+                        plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(self.working_dir, "{}_fpolstd_bias.png".format(self.source)),
                         dpi=300, bbox_inches="tight")
             plt.close(fig)
         except (TypeError, IndexError, ValueError):
@@ -651,6 +757,9 @@ if __name__ == "__main__":
 
     # Common map parameters
     common_mapsize_clean = choose_mapsize(source)
+    # Double mapsize
+    common_mapsize_clean = (int(2*common_mapsize_clean[0]), common_mapsize_clean[1])
+    print("Using mapsize : ", common_mapsize_clean)
     beam_size = get_beam_info_by_dec(source)
     common_beam = (beam_size, beam_size, 0)
 
@@ -658,15 +767,20 @@ if __name__ == "__main__":
     source_epoch_core_offset_file = "core_offsets.txt"
 
     # File with source, epoch of filtered by image rms
-    # bad_epochs_file = "final_clean_rms_epoch_filter"
     bad_epochs_file = "deleted_by_rms_filter_k3"
+    # bad_epochs_file = "deleted_by_rms_filter_k1"
 
     # Directory to save intermediate and final results
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/bias_right/k3"
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_clean_rms"
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_bad"
-    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_bad_noinvert"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_bad_noinvert"
     # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/script_clean_rms_k3_check_invert"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_k3"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_k3_failed"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_k3_1641_x2"
+    results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_k3_high_dynrange/double_pixsize_and_cc_filtered/k3"
+    # results_dir = "/mnt/storage/ilya/MOJAVE_pol_stacking/final_k1_failed"
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
     working_dir = os.path.join(results_dir, source)
@@ -678,10 +792,12 @@ if __name__ == "__main__":
     # path_to_clean_script = "script_clean_rms_k3"
     # CLEAN with boxes for e.g. 3C273
     # path_to_clean_script = "final_clean_box"
-    # Deep CLEAN
+    # Deep CLEAN k=1
     # path_to_clean_script = "final_clean_rms_last"
-    # k 3
-    path_to_clean_script = "script_clean_rms_last"
+    # k=3
+    path_to_clean_script = "script_clean_rms_last_k3"
+    # DR script
+    # path_to_clean_script = "script_clean_rms_dr_12000"
     # My variant of invert for k3
     # path_to_clean_script = "script_clean_rms_last_invert"
     # Yura's variant of invert for k3
@@ -721,7 +837,7 @@ if __name__ == "__main__":
     # Number of non-masked epochs in pixel to consider when calculating means.
     n_epochs_not_masked_min = 1
     # Number of non-masked epochs in pixel to consider when calculating errors
-    # or stds of PANG, FPOL.
+    # or stds of PANG, FPOL. Also when calculating means for bias estimation.
     n_epochs_not_masked_min_std = 3
     # Number of non-masked realizations in pixel to consider when calculating
     # errors for individual epochs maps.
@@ -739,7 +855,9 @@ if __name__ == "__main__":
                             create_original_V_stack=False, box_files=box_files,
                             path_to_uvfits_files=path_to_uvfits_files,
                             omit_residuals=omit_residuals, do_smooth=do_smooth, bad_epochs_file=bad_epochs_file)
-    simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=True)
+    # FIXME: Here we can set masking CCs
+    simulation.create_original_stack(n_epochs_not_masked_min, n_epochs_not_masked_min_std, remove_original_clean_files=False,
+                                     mask_cc_models_using_their_stack=True)
     simulation.create_artificial_uvdata(sigma_scale_amplitude, noise_scale,
                                         sigma_evpa_deg, VLBA_residual_Dterms_file,
                                         noise_from_V)

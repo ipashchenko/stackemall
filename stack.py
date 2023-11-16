@@ -7,7 +7,8 @@ import sys
 import numpy as np
 from collections import Mapping
 from stack_utils import (pol_mask, stat_of_masked, find_image_std, find_bbox,
-                         correct_ppol_bias, image_of_nepochs_not_masked)
+                         correct_ppol_bias, image_of_nepochs_not_masked,
+                         get_mask_for_ccstack, filter_CC)
 sys.path.insert(0, 've/vlbi_errors')
 from spydiff import clean_difmap
 from from_fits import (create_image_from_fits_file,
@@ -18,6 +19,58 @@ from image import plot as iplot
 import matplotlib.pyplot as plt
 from astropy.io import fits as pf
 from astropy.stats import mad_std
+import astropy.units as u
+
+
+# # FIXME: Put command file to local dir
+# def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, restore_beam, uvfits_template, out_ccfits,
+#                                         shift=None, show_difmap_output=True):
+#     """
+#     Using difmap-formated model file (e.g. flux, r, theta) obtain convolution of your model with the specified beam.
+#
+#     :param difmap_model_file:
+#         Difmap-formated model file. Use ``JetImage.save_image_to_difmap_format`` to obtain it.
+#     :param stokes:
+#         Stokes parameter.
+#     :param mapsize:
+#         Iterable of image size and pixel size (mas).
+#     :param restore_beam:
+#         Beam to restore: bmaj(mas), bmin(mas), bpa(deg).
+#     :param uvfits_template:
+#         Template uvfits observation to use. Difmap can't read model without having observation at hand.
+#     :param out_ccfits:
+#         File name to save resulting convolved map.
+#     :param shift: (optional)
+#         Shift to apply. Need this because wmodel doesn;t apply shift. If
+#         ``None`` then do not apply shift. (default: ``None``)
+#     :param show_difmap_output: (optional)
+#         Boolean. Show Difmap output? (default: ``True``)
+#     """
+#     stamp = datetime.datetime.now()
+#     command_file = "difmap_commands_{}".format(stamp.isoformat())
+#     difmapout = open(command_file, "w")
+#     difmapout.write("observe " + uvfits_template + "\n")
+#     difmapout.write("select " + stokes + "\n")
+#     difmapout.write("rmodel " + difmap_model_file + "\n")
+#     difmapout.write("mapsize " + str(mapsize[0] * 2) + "," + str(mapsize[1]) + "\n")
+#     if shift is not None:
+#         # Here we need shift, because in CLEANing shifts are not applied to
+#         # saving model files!
+#         difmapout.write("shift " + str(shift[0]) + ', ' + str(shift[1]) + "\n")
+#     print("Restoring difmap model with BEAM : bmin = " + str(restore_beam[1]) + ", bmaj = " + str(restore_beam[0]) + ", " + str(restore_beam[2]) + " deg")
+#     # default dimfap: false,true (parameters: omit_residuals, do_smooth)
+#     difmapout.write("restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) +
+#                     "," + "true,false" + "\n")
+#     difmapout.write("wmap " + out_ccfits + "\n")
+#     difmapout.write("exit\n")
+#     difmapout.close()
+#
+#     shell_command = "difmap < " + command_file + " 2>&1"
+#     if not show_difmap_output:
+#         shell_command += " >/dev/null"
+#     os.system(shell_command)
+#     os.unlink(command_file)
+
 
 
 def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, restore_beam, uvfits_template, out_ccfits,
@@ -38,33 +91,49 @@ def convert_difmap_model_file_to_CCFITS(difmap_model_file, stokes, mapsize, rest
     :param out_ccfits:
         File name to save resulting convolved map.
     :param shift: (optional)
-        Shift to apply. Need this because wmodel doesn;t apply shift. If
+        Shift to apply. Need this because wmodel doesn't apply shift. If
         ``None`` then do not apply shift. (default: ``None``)
     :param show_difmap_output: (optional)
         Boolean. Show Difmap output? (default: ``True``)
     """
-    stamp = datetime.datetime.now()
-    command_file = "difmap_commands_{}".format(stamp.isoformat())
-    difmapout = open(command_file, "w")
-    difmapout.write("observe " + uvfits_template + "\n")
-    difmapout.write("select " + stokes + "\n")
-    difmapout.write("rmodel " + difmap_model_file + "\n")
-    difmapout.write("mapsize " + str(mapsize[0] * 2) + "," + str(mapsize[1]) + "\n")
+    from subprocess import Popen, PIPE
+
+    cmd = "observe " + uvfits_template + "\n"
+    cmd += "select " + stokes + "\n"
+    cmd += "rmodel " + difmap_model_file + "\n"
+    cmd += "mapsize " + str(mapsize[0] * 2) + "," + str(mapsize[1]) + "\n"
     if shift is not None:
-        difmapout.write("shift " + str(shift[0]) + ', ' + str(shift[1]) + "\n")
+        # Here we need shift, because in CLEANing shifts are not applied to
+        # saving model files!
+        cmd += "shift " + str(shift[0]) + ', ' + str(shift[1]) + "\n"
     print("Restoring difmap model with BEAM : bmin = " + str(restore_beam[1]) + ", bmaj = " + str(restore_beam[0]) + ", " + str(restore_beam[2]) + " deg")
     # default dimfap: false,true (parameters: omit_residuals, do_smooth)
-    difmapout.write("restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) +
-                    "," + "true,false" + "\n")
-    difmapout.write("wmap " + out_ccfits + "\n")
-    difmapout.write("exit\n")
-    difmapout.close()
+    cmd += "restore " + str(restore_beam[1]) + "," + str(restore_beam[0]) + "," + str(restore_beam[2]) + "," + "true,false" + "\n"
+    cmd += "wmap " + out_ccfits + "\n"
+    cmd += "exit\n"
 
-    shell_command = "difmap < " + command_file + " 2>&1"
-    if not show_difmap_output:
-        shell_command += " >/dev/null"
-    os.system(shell_command)
-    os.unlink(command_file)
+    with Popen('difmap', stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True) as difmap:
+        outs, errs = difmap.communicate(input=cmd)
+    if show_difmap_output:
+        print(outs)
+        print(errs)
+
+
+def CCFITS_to_difmap(ccfits, difmap_mdl_file, shift=None):
+    hdus = pf.open(ccfits)
+    hdus.verify("silentfix")
+    data = hdus[1].data
+    deg2mas = u.deg.to(u.mas)
+    with open(difmap_mdl_file, "w") as fo:
+        for flux, ra, dec in zip(data['FLUX'], data['DELTAX'], data['DELTAY']):
+            ra *= deg2mas
+            dec *= deg2mas
+            if shift is not None:
+                ra -= shift[0]
+                dec -= shift[1]
+            theta = np.rad2deg(np.arctan2(ra, dec))
+            r = np.hypot(ra, dec)
+            fo.write("{} {} {}\n".format(flux, r, theta))
 
 
 class Stack(object):
@@ -72,7 +141,8 @@ class Stack(object):
                  shifts=None, box_files=None, shifts_errors=None, working_dir=None,
                  create_stacks=True, n_epochs_not_masked_min=1,
                  n_epochs_not_masked_min_std=5, use_V=False,
-                 omit_residuals=False, do_smooth=True):
+                 omit_residuals=False, do_smooth=True,
+                 mask_cc_models_using_their_stack=False):
         """
         :param uvfits_files:
             Iterable of UVFITS files with self-calibrated and D-terms corrected data.
@@ -107,6 +177,9 @@ class Stack(object):
             Difmap CLEAN parameter. (default: ``False``)
         :param do_smooth: (optional)
             Difmap CLEAN parameter. (default: ``True``)
+        :param mask_cc_models_using_their_stack: (optional)
+            Boolean. If ``True`` than mask CC-components based on their stack.
+            (default: ``False``)
         """
 
         # Check input data consistency
@@ -142,6 +215,8 @@ class Stack(object):
 
         self.omit_residuals = omit_residuals
         self.do_smooth = do_smooth
+
+        self.mask_cc_models_using_their_stack = mask_cc_models_using_their_stack
 
         if working_dir is None:
             working_dir = os.getcwd()
@@ -198,6 +273,9 @@ class Stack(object):
         if use_V:
             self.stack_images["V"] = None
 
+        self.per_epoch_P_mask = list()
+        self.per_epoch_I_mask = list()
+
         # Containers for full stack CC-only images
         self.cconly_stack_images = dict()
         for stokes in ("I", "Q", "U", "PPOL", "PANG", "FPOL"):
@@ -216,7 +294,13 @@ class Stack(object):
 
         self._image_ctor_params = dict()
         self._clean_original_data_with_the_same_params()
-        self.fill_cc_models()
+
+        # Optionally filter CC for creating artificial uv-data
+        mask = None
+        if mask_cc_models_using_their_stack:
+            mask = self.create_mask_from_stacked_cc()
+        self.fill_cc_models(mask=mask)
+
         if create_stacks:
             # Need this first if omit_residuals = True
             self.create_stack_residual_images()
@@ -274,6 +358,7 @@ class Stack(object):
 
             for stokes in self.stokes:
                 print("Stokes {}".format(stokes))
+                # Here shifts are not applied for saving difmap model file!!!
                 clean_difmap(fname=uvfits_file, outfname="cc_{}_{}.fits".format(stokes, str(i+1).zfill(3)),
                              stokes=stokes, outpath=self.working_dir, beam_restore=self.beam,
                              mapsize_clean=self.mapsize_clean, shift=shift,
@@ -289,13 +374,25 @@ class Stack(object):
         self._image_ctor_params["freq"] = image.freq
         self._image_ctor_params["pixrefval"] = image.pixrefval
 
-    def fill_cc_models(self):
+    def create_mask_from_stacked_cc(self, cc_conv_cutoff_mjy=0.0075, kern_width=10):
+        """
+        Create mask on stacked Stokes I CC-components.
+        cutoff: 0.0075 for 2251+158, 0.00025 for 0212+735
+        """
+        return get_mask_for_ccstack(self.ccfits_files["I"], cc_conv_cutoff_mjy,
+                                    kern_width, imsize=self.mapsize_clean[0])
+
+    def fill_cc_models(self, mask=None):
         for i in range(len(self.uvfits_files)):
             self.cc_models[i] = dict()
             for stk in self.stokes:
+                if mask is not None:
+                    filter_CC(self.ccfits_files[stk][i], mask)
                 model = create_model_from_fits_file(self.ccfits_files[stk][i])
                 self.cc_models[i][stk] = model
 
+    # Must be done after ordinary stacks are constructed because we need
+    # per-epoch masks!
     def create_stack_CConly_images(self):
         print("Convolving CC with beam and creating residual-less images")
         for stk in self.stokes:
@@ -304,6 +401,11 @@ class Stack(object):
                     shift = self.shifts[i]
                 else:
                     shift = None
+                # If CCs were filtered, than we need to update difmap model
+                # files using also shifts (difmap doesn't write shifts when
+                # saving models)
+                if self.mask_cc_models_using_their_stack:
+                    CCFITS_to_difmap(self.ccfits_files[stk][i], self.difmap_files[stk][i], shift=shift)
                 convert_difmap_model_file_to_CCFITS(self.difmap_files[stk][i], stk, self.mapsize_clean, self.beam,
                                                     self.uvfits_files[i], self.cconly_fits_files[stk][i], shift=shift)
 
@@ -401,6 +503,76 @@ class Stack(object):
                                     self.cconly_stack_images["Q"].image)
         pang_image.image = pang_array
         self.cconly_stack_images["PANG"] = pang_image
+
+
+        print("Creating PPOL2 & FPOL2 cc-only stack")
+        ppol2_image = Image()
+        ppol2_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="PPOL2")
+        # This will be list of PPOL, PANG and FPOL arrays masked according to
+        # there's own epoch polarization mask
+        ppol2_arrays = list()
+        fpol2_arrays = list()
+        pang2_arrays = list()
+
+        for i, i_image, q_image, u_image in zip(range(len(i_images)), i_images, q_images, u_images):
+            ppol2_array = np.ma.array(np.hypot(q_image.image, u_image.image), mask=self.per_epoch_P_mask[i])
+            ppol2_arrays.append(ppol2_array)
+            fpol2_arrays.append(ppol2_array/i_image.image)
+            pang2_array = 0.5*np.arctan2(u_image.image, q_image.image)
+            pang2_array = np.ma.array(pang2_array, mask=self.per_epoch_P_mask[i])
+            pang2_arrays.append(pang2_array)
+
+        ppol2_image.image = stat_of_masked(ppol2_arrays, stat="median",
+                                           n_epochs_not_masked_min=self.n_epochs_not_masked_min)
+        self.cconly_stack_images["PPOL2"] = ppol2_image
+
+
+        fpol2_image = Image()
+        fpol2_image._construct(imsize=self._image_ctor_params["imsize"],
+                              pixsize=self._image_ctor_params["pixsize"],
+                              pixref=self._image_ctor_params["pixref"],
+                              freq=self._image_ctor_params["freq"],
+                              pixrefval=self._image_ctor_params["pixrefval"],
+                              stokes="FPOL2")
+        fpol2_image.image = stat_of_masked(fpol2_arrays, stat="median",
+                                           n_epochs_not_masked_min=self.n_epochs_not_masked_min)
+        self.cconly_stack_images["FPOL2"] = fpol2_image
+
+
+        print("Creating STD FPOL cc-only image")
+        stdfpol_image = Image()
+        stdfpol_image._construct(imsize=self._image_ctor_params["imsize"],
+                                 pixsize=self._image_ctor_params["pixsize"],
+                                 pixref=self._image_ctor_params["pixref"],
+                                 freq=self._image_ctor_params["freq"],
+                                 pixrefval=self._image_ctor_params["pixrefval"],
+                                 stokes="FPOLSTD")
+        stdfpol_image.image = stat_of_masked(fpol2_arrays, stat="std",
+                                             n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
+        self.cconly_stack_images["FPOLSTD"] = stdfpol_image
+
+        print("Creating STD PPOL2 cc-only image")
+        stdppol_image = Image()
+        stdppol_image._construct(imsize=self._image_ctor_params["imsize"],
+                                 pixsize=self._image_ctor_params["pixsize"],
+                                 pixref=self._image_ctor_params["pixref"],
+                                 freq=self._image_ctor_params["freq"],
+                                 pixrefval=self._image_ctor_params["pixrefval"],
+                                 stokes="PPOLSTD")
+        stdppol_image.image = stat_of_masked(ppol2_arrays, stat="std",
+                                             n_epochs_not_masked_min=self.n_epochs_not_masked_min_std)
+        self.cconly_stack_images["PPOLSTD"] = stdppol_image
+
+
+
+
+
+
 
     def create_stack_residual_images(self):
         print("Creating I residual stack")
@@ -612,7 +784,10 @@ class Stack(object):
             pang2_array = np.ma.array(pang2_array, mask=ppol2_mask_dict["P"])
             pang2_arrays.append(pang2_array)
 
-        ppol2_image.image = stat_of_masked(ppol2_arrays, stat="mean",
+            self.per_epoch_P_mask.append(ppol2_mask_dict["P"])
+            self.per_epoch_I_mask.append(ppol2_mask_dict["I"])
+
+        ppol2_image.image = stat_of_masked(ppol2_arrays, stat="median",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["PPOL2"] = ppol2_image
 
@@ -659,7 +834,7 @@ class Stack(object):
                                freq=self._image_ctor_params["freq"],
                                pixrefval=self._image_ctor_params["pixrefval"],
                                stokes="FPOL2")
-        fpol2_image.image = stat_of_masked(fpol2_arrays, stat="mean",
+        fpol2_image.image = stat_of_masked(fpol2_arrays, stat="median",
                                            n_epochs_not_masked_min=self.n_epochs_not_masked_min)
         self.stack_images["FPOL2"] = fpol2_image
 
@@ -742,177 +917,182 @@ class Stack(object):
         if blc[1] == 0:
             blc = (blc[0], 1)
 
-        print("Plotting stack images with blc={}, trc={}".format(blc, trc))
-        # I (1 contour) + P (color) + EVPA (vector)
-        fig = iplot(ppol_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=ppol_quantile, blc=blc, trc=trc,
-                    close=False, contour_color='black',
-                    plot_colorbar=False)
-        # Add IPOL single contour and vectors of PANG with colors of PPOL
-        fig = iplot(contours=ipol_image.image, vectors=pang_image.image,
-                    x=ipol_image.x, y=ipol_image.y, vinc=4,  contour_linewidth=0.25,
-                    vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
-                    beam=self.beam, close=False, show_beam=True, show=True,
-                    contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
-        axes = fig.get_axes()[0]
-        axes.invert_xaxis()
-        fig.savefig(os.path.join(outdir, "{}_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+        try:
 
-        if "V" in self.stokes:
-            vpol_image = self.stack_images["V"]
-            max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_image.image, mask=self.i_mask)))
-            v_std = mad_std(np.ma.array(1000*vpol_image.image, mask=~self.i_mask).compressed())
-            max_snr = max_abs_v/v_std
-            fig = iplot(ipol_image.image, 1000*vpol_image.image/v_std, x=ipol_image.x, y=ipol_image.y,
-                        min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
-                        beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
-                        show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
-                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-            fig.savefig(os.path.join(outdir, "{}_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            print("Plotting stack images with blc={}, trc={}".format(blc, trc))
+            # I (1 contour) + P (color) + EVPA (vector)
+            fig = iplot(ppol_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=ppol_quantile, blc=blc, trc=trc,
+                        close=False, contour_color='black',
+                        plot_colorbar=False)
+            # Add IPOL single contour and vectors of PANG with colors of PPOL
+            fig = iplot(contours=ipol_image.image, vectors=pang_image.image,
+                        x=ipol_image.x, y=ipol_image.y, vinc=4,  contour_linewidth=0.25,
+                        vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
+                        beam=self.beam, close=False, show_beam=True, show=True,
+                        contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
+            axes = fig.get_axes()[0]
+            axes.invert_xaxis()
+            fig.savefig(os.path.join(outdir, "{}_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
             plt.close()
 
-        # Add IPOL single contour and colors of FPOL with colorbar
-        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
-        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fig = iplot(ipol_image.image, fpol_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            if "V" in self.stokes:
+                vpol_image = self.stack_images["V"]
+                max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_image.image, mask=self.i_mask)))
+                v_std = mad_std(np.ma.array(1000*vpol_image.image, mask=~self.i_mask).compressed())
+                max_snr = max_abs_v/v_std
+                fig = iplot(ipol_image.image, 1000*vpol_image.image/v_std, x=ipol_image.x, y=ipol_image.y,
+                            min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
+                            beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
+                            show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
+                            contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+                fig.savefig(os.path.join(outdir, "{}_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+                plt.close()
 
-        fig = iplot(ppol2_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=ppol_quantile, blc=blc, trc=trc,
-                    close=False, contour_color='black',
-                    plot_colorbar=False)
-        fig = iplot(contours=ipol_image.image, vectors=pang2_image.image,
-                    x=ipol_image.x, y=ipol_image.y, vinc=4,  contour_linewidth=0.25,
-                    vectors_mask=pang2_image.image.mask, abs_levels=[3*std], blc=blc, trc=trc,
-                    beam=self.beam, close=False, show_beam=True, show=True,
-                    contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
-        axes = fig.get_axes()[0]
-        axes.invert_xaxis()
-        fig.savefig(os.path.join(outdir, "{}_ppol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            # Add IPOL single contour and colors of FPOL with colorbar
+            # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+            # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+            fig = iplot(ipol_image.image, fpol_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
-        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fig = iplot(contours=ipol_image.image, colors=nepochs_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=nepochs_image.image.mask, color_clim=None, blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label="# nepochs", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25, n_discrete_colors=np.max(nepochs_image.image.flatten()))
-        fig.savefig(os.path.join(outdir, "{}_nepochs.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            fig = iplot(ppol2_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=ppol_quantile, blc=blc, trc=trc,
+                        close=False, contour_color='black',
+                        plot_colorbar=False)
+            fig = iplot(contours=ipol_image.image, vectors=pang2_image.image,
+                        x=ipol_image.x, y=ipol_image.y, vinc=4,  contour_linewidth=0.25,
+                        vectors_mask=pang2_image.image.mask, abs_levels=[3*std], blc=blc, trc=trc,
+                        beam=self.beam, close=False, show_beam=True, show=True,
+                        contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
+            axes = fig.get_axes()[0]
+            axes.invert_xaxis()
+            fig.savefig(os.path.join(outdir, "{}_ppol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
-        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fig = iplot(contours=ipol_image.image, colors=fpol2_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=fpol2_image.image.mask, color_clim=[0, 0.7], blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_fpol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+            # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+            fig = iplot(contours=ipol_image.image, colors=nepochs_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=nepochs_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label="# nepochs", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25, n_discrete_colors=np.max(nepochs_image.image.flatten()))
+            fig.savefig(os.path.join(outdir, "{}_nepochs.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        fig = iplot(contours=ipol_image.image, colors=std_ppol_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=std_ppol_image.image.mask, color_clim=None, blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label=r"$\sigma_{P}$", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_ppolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+            # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+            fig = iplot(contours=ipol_image.image, colors=fpol2_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=fpol2_image.image.mask, color_clim=[0, 0.7], blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_fpol2.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        fig = iplot(contours=ipol_image.image, colors=std_fpol_image.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=std_fpol_image.image.mask, color_clim=None, blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label=r"$\sigma_{m}$", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_fpolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            fig = iplot(contours=ipol_image.image, colors=std_ppol_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=std_ppol_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label=r"$\sigma_{P}$", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_ppolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
-        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fig = iplot(contours=ipol_image.image, colors=np.rad2deg(std_pang_image.image), x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=std_pang_image.image.mask, color_clim=None, blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label=r"$\sigma_{\rm EVPA},$ $^{\circ}$", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            fig = iplot(contours=ipol_image.image, colors=std_fpol_image.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=std_fpol_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label=r"$\sigma_{m}$", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_fpolstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        print("Plotting CC-only stack images with blc={}, trc={}".format(blc, trc))
-        # I (1 contour) + P (color) + EVPA (vector)
-        fig = iplot(ppol_cconly_image.image, x=ipol_cconly_image.x, y=ipol_cconly_image.y,
-                    min_abs_level=ppol_quantile, blc=blc, trc=trc,
-                    close=False, contour_color='black',
-                    plot_colorbar=False)
-        # Add IPOL single contour and vectors of PANG with colors of PPOL
-        fig = iplot(contours=ipol_cconly_image.image, vectors=pang_cconly_image.image,
-                    x=ipol_cconly_image.x, y=ipol_cconly_image.y, vinc=4,  contour_linewidth=0.25,
-                    vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
-                    beam=self.beam, close=False, show_beam=True, show=True,
-                    contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
-        axes = fig.get_axes()[0]
-        axes.invert_xaxis()
-        fig.savefig(os.path.join(outdir, "{}_cconly_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+            # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+            fig = iplot(contours=ipol_image.image, colors=np.rad2deg(std_pang_image.image), x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=std_pang_image.image.mask, color_clim=None, blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label=r"$\sigma_{\rm EVPA},$ $^{\circ}$", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_pangstd.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        if "V" in self.stokes:
-            vpol_cconly_image = self.cconly_stack_images["V"]
-            max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_cconly_image.image, mask=self.i_mask)))
-            max_snr = max_abs_v/v_std
-            fig = iplot(ipol_cconly_image.image, 1000*vpol_cconly_image.image/v_std,
+            print("Plotting CC-only stack images with blc={}, trc={}".format(blc, trc))
+            # I (1 contour) + P (color) + EVPA (vector)
+            fig = iplot(ppol_cconly_image.image, x=ipol_cconly_image.x, y=ipol_cconly_image.y,
+                        min_abs_level=ppol_quantile, blc=blc, trc=trc,
+                        close=False, contour_color='black',
+                        plot_colorbar=False)
+            # Add IPOL single contour and vectors of PANG with colors of PPOL
+            fig = iplot(contours=ipol_cconly_image.image, vectors=pang_cconly_image.image,
+                        x=ipol_cconly_image.x, y=ipol_cconly_image.y, vinc=4,  contour_linewidth=0.25,
+                        vectors_mask=ppol_mask, abs_levels=[3*std], blc=blc, trc=trc,
+                        beam=self.beam, close=False, show_beam=True, show=True,
+                        contour_color='black', fig=fig, vector_color="black", plot_colorbar=False)
+            axes = fig.get_axes()[0]
+            axes.invert_xaxis()
+            fig.savefig(os.path.join(outdir, "{}_cconly_ppol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
+
+            if "V" in self.stokes:
+                vpol_cconly_image = self.cconly_stack_images["V"]
+                max_abs_v = np.ma.max(np.ma.abs(np.ma.array(1000*vpol_cconly_image.image, mask=self.i_mask)))
+                max_snr = max_abs_v/v_std
+                fig = iplot(ipol_cconly_image.image, 1000*vpol_cconly_image.image/v_std,
+                            x=ipol_cconly_image.x, y=ipol_cconly_image.y,
+                            min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
+                            beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
+                            show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
+                            contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+                fig.savefig(os.path.join(outdir, "{}_cconly_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+                plt.close()
+
+            # Add IPOL single contour and colors of FPOL with colorbar
+            # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
+            # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
+            fig = iplot(ipol_cconly_image.image, fpol_cconly_image.image,
                         x=ipol_cconly_image.x, y=ipol_cconly_image.y,
-                        min_abs_level=3*std, colors_mask=ipol_mask, blc=blc, trc=trc,
-                        beam=self.beam, close=False, colorbar_label=r"$\frac{V}{\sigma_{V}}$",
-                        show_beam=True, show=True, cmap='bwr', color_clim=[-max_snr, max_snr],
-                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-            fig.savefig(os.path.join(outdir, "{}_cconly_vpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
+                        min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
+                        beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
+                        cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
+                        contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_cconly_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
             plt.close()
 
-        # Add IPOL single contour and colors of FPOL with colorbar
-        # max_fpol_range, _ = choose_range_from_positive_tailed_distribution(np.ma.array(fpol_image.image, mask=pang_mask).compressed())
-        # fpol_mask = np.logical_or(pang_mask, fpol_image.image > max_fpol_range)
-        fig = iplot(ipol_cconly_image.image, fpol_cconly_image.image,
-                    x=ipol_cconly_image.x, y=ipol_cconly_image.y,
-                    min_abs_level=3*std, colors_mask=ppol_mask, color_clim=[0, 0.7], blc=blc, trc=trc,
-                    beam=self.beam, close=False, colorbar_label="m", show_beam=True, show=True,
-                    cmap='nipy_spectral_r', contour_color='black', plot_colorbar=True,
-                    contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_cconly_fpol.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            blc_all = (1, 1)
+            trc_all = (self.mapsize_clean[0], self.mapsize_clean[0])
 
-        blc_all = (1, 1)
-        trc_all = (self.mapsize_clean[0], self.mapsize_clean[0])
+            print("Plotting residuals stack images with blc={}, trc={}".format(blc, trc))
 
-        print("Plotting residuals stack images with blc={}, trc={}".format(blc, trc))
+            fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
+                        beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
+                        show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
+                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_ipol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        fig = iplot(ipol_image.image, 1000*ipol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
-                    beam=self.beam, close=False, colorbar_label=r"$I_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
-                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_ipol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
+                        beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
+                        show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
+                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_qpol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        fig = iplot(ipol_image.image, 1000*qpol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
-                    beam=self.beam, close=False, colorbar_label=r"$Q_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
-                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_qpol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+            fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
+                        min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
+                        beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
+                        show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
+                        contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
+            fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
+            plt.close()
 
-        fig = iplot(ipol_image.image, 1000*upol_dimage.image, x=ipol_image.x, y=ipol_image.y,
-                    min_abs_level=3*std, colors_mask=None, blc=blc_all, trc=trc_all,
-                    beam=self.beam, close=False, colorbar_label=r"$U_{\rm resid}$, mJy/beam",
-                    show_beam=True, show=True, cmap='bwr', color_clim=[-3000*std, 3000*std],
-                    contour_color='black', plot_colorbar=True, contour_linewidth=0.25)
-        fig.savefig(os.path.join(outdir, "{}_upol_residuals.png".format(save_fn)), dpi=600, bbox_inches="tight")
-        plt.close()
+        except:
+            pass
 
     def save_stack_images(self, save_fn, outdir=None):
         save_dict = dict()
@@ -953,6 +1133,9 @@ class Stack(object):
             # masks with other parameters can be recovered using I, Q, U, RPPOL
             # (last is raw PPOL w/o bias correction)
             if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
+                save_dict.update({stokes: self.cconly_stack_images[stokes].image})
+            # These are masked but try the same to save in npz
+            elif stokes in ("PPOL2", "FPOL2", "PPOLSTD", "FPOLSTD"):
                 save_dict.update({stokes: self.cconly_stack_images[stokes].image})
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
@@ -1002,6 +1185,9 @@ class Stack(object):
             # (last is raw PPOL w/o bias correction)
             if stokes in ("I", "Q", "U", "V", "PPOL", "FPOL", "PANG"):
                 hdu = pf.PrimaryHDU(data=self.cconly_stack_images[stokes].image, header=hdr)
+            # Others (scalar averaged) have masks
+            elif stokes in ("PPOL2", "FPOL2", "PPOLSTD", "FPOLSTD"):
+                hdu = pf.PrimaryHDU(data=np.ma.filled(self.cconly_stack_images[stokes].image, np.nan), header=hdr)
             else:
                 raise Exception("This stokes ({}) is not supposed to be here!".format(stokes))
 
